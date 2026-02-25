@@ -1,0 +1,67 @@
+<style>
+    [x-cloak] { display: none !important; }
+    
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #0f172a;
+        color: #f8fafc;
+        transition: background-color 0.5s ease;
+        overflow-x: hidden;
+    }
+
+    /* Glassmorphism Utilities */
+    .glass {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Theme Gradients */
+    .gold-gradient { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .kids-gradient { background: linear-gradient(135deg, #FFD700 0%, #FF4500 100%); }
+    
+    /* Dynamic Themes (Variables) */
+    .theme-jan { --accent: #fbbf24; --bg-overlay: rgba(251, 191, 36, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1470252649358-96949c751d8d?q=80&w=800](https://images.unsplash.com/photo-1470252649358-96949c751d8d?q=80&w=800)'); }
+    .theme-fev { --accent: #34d399; --bg-overlay: rgba(52, 211, 153, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1501004318641-739e828a1751?q=80&w=800](https://images.unsplash.com/photo-1501004318641-739e828a1751?q=80&w=800)'); }
+    .theme-mar { --accent: #818cf8; --bg-overlay: rgba(129, 140, 248, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1507692049790-de58290a4334?q=80&w=800](https://images.unsplash.com/photo-1507692049790-de58290a4334?q=80&w=800)'); }
+    .theme-abr { --accent: #fcd34d; --bg-overlay: rgba(252, 211, 77, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1495107336281-199c74661187?q=80&w=800](https://images.unsplash.com/photo-1495107336281-199c74661187?q=80&w=800)'); }
+    .theme-mai { --accent: #f472b6; --bg-overlay: rgba(244, 114, 182, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1518199266791-73994947c491?q=80&w=800](https://images.unsplash.com/photo-1518199266791-73994947c491?q=80&w=800)'); }
+    .theme-jun { --accent: #60a5fa; --bg-overlay: rgba(96, 165, 250, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=800](https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=800)'); }
+    .theme-jul { --accent: #f59e0b; --bg-overlay: rgba(245, 158, 11, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1473186578172-c141e6798ee4?q=80&w=800](https://images.unsplash.com/photo-1473186578172-c141e6798ee4?q=80&w=800)'); }
+    .theme-ago { --accent: #2dd4bf; --bg-overlay: rgba(45, 212, 191, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1516589174184-c6858b16ecb0?q=80&w=800](https://images.unsplash.com/photo-1516589174184-c6858b16ecb0?q=80&w=800)'); }
+    .theme-set { --accent: #a3e635; --bg-overlay: rgba(163, 230, 53, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?q=80&w=800](https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?q=80&w=800)'); }
+    .theme-out { --accent: #fb923c; --bg-overlay: rgba(251, 146, 60, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1493238792000-8113da705763?q=80&w=800](https://images.unsplash.com/photo-1493238792000-8113da705763?q=80&w=800)'); }
+    .theme-nov { --accent: #94a3b8; --bg-overlay: rgba(148, 163, 184, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1464802686167-b939a67e06a1?q=80&w=800](https://images.unsplash.com/photo-1464802686167-b939a67e06a1?q=80&w=800)'); }
+    .theme-dez { --accent: #ef4444; --bg-overlay: rgba(239, 68, 68, 0.1); --bg-image: url('[https://images.unsplash.com/photo-1543589077-47d81606c1bf?q=80&w=800](https://images.unsplash.com/photo-1543589077-47d81606c1bf?q=80&w=800)'); }
+    
+    .theme-kids { --accent: #FFD700; --bg-overlay: #000; --bg-image: none; background-color: #1e293b; font-family: 'Fredoka', sans-serif; }
+
+    .dynamic-header {
+        background: linear-gradient(to bottom, rgba(15, 23, 42, 0.3), #020617), var(--bg-image);
+        background-size: cover;
+        background-position: center;
+    }
+
+    .accent-text { color: var(--accent); }
+    .accent-bg { background-color: var(--accent); }
+    .accent-border { border-color: var(--accent); }
+
+    /* Memory Game Cards */
+    .card-inner { transition: transform 0.6s; transform-style: preserve-3d; }
+    .card-flipped { transform: rotateY(180deg); }
+    .card-front, .card-back { backface-visibility: hidden; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    .card-back { transform: rotateY(180deg); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+</style>
