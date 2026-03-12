@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#FF6B6B">
+<meta name="description" content="Mundo Encantado - App educativo para crianças com histórias, jogos e valores">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mundo Encantado">
+<link rel="manifest" href="manifest.json">
+<title>✨ Mundo Encantado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, query, where, getDocs, orderBy, serverTimestamp, Timestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// =====================================================
+// ⚙️  SUBSTITUA AQUI PELAS SUAS CREDENCIAIS FIREBASE
+//     console.firebase.google.com → Novo projeto →
+//     Configurações → Adicionar app web
+// =====================================================
+const FIREBASE_CONFIG = {
+  apiKey:            "COLE_SUA_API_KEY_AQUI",
+  authDomain:        "COLE_SEU_AUTH_DOMAIN_AQUI",
+  projectId:         "COLE_SEU_PROJECT_ID_AQUI",
+  storageBucket:     "COLE_SEU_STORAGE_BUCKET_AQUI",
+  messagingSenderId: "COLE_SEU_SENDER_ID_AQUI",
+  appId:             "COLE_SEU_APP_ID_AQUI"
+};
+// =====================================================
+
+const firebaseApp = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(firebaseApp);
+const db   = getFirestore(firebaseApp);
+
+// Expose to global scope for non-module code
+window.FB = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged, doc, setDoc, getDoc, updateDoc,
+  collection, addDoc, query, where, getDocs, orderBy, serverTimestamp, Timestamp };
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<style>
+/* =====================================================
+   DESIGN SYSTEM
+   ===================================================== */
+:root{
+  --orange:#FF9F43; --orange-dark:#d4751e;
+  --red:#FF6B6B; --teal:#4ECDC4; --blue:#48DBFB;
+  --purple:#A29BFE; --green:#55EFC4; --yellow:#FFC947;
+  --pink:#fd79a8; --indigo:#6C5CE7;
+  --bg:#FFF9F0; --card:#ffffff;
+  --text:#2d3436; --muted:#636e72; --faint:#b2bec3;
+  --r:20px; --r-lg:28px;
+  --shadow:0 4px 20px rgba(0,0,0,0.08);
+  --shadow-lg:0 10px 40px rgba(0,0,0,0.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;overflow-x:hidden;}
+
+/* =====================================================
+   SCREENS
+   ===================================================== */
+.screen{display:none;min-height:100vh;animation:fadeUp .4s ease;}
+.screen.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+
+/* =====================================================
+   PARTICLES
+   ===================================================== */
+#particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.ptc{position:absolute;animation:ptcFloat linear infinite;opacity:0;}
+@keyframes ptcFloat{0%{transform:translateY(100vh) rotate(0deg);opacity:0;}10%{opacity:.5;}90%{opacity:.5;}100%{transform:translateY(-80px) rotate(360deg);opacity:0;}}
+
+/* =====================================================
+   HEADER (shared)
+   ===================================================== */
+.hero-header{
+  background:linear-gradient(135deg,#FF6B6B 0%,#FFC947 50%,#4ECDC4 100%);
+  padding:32px 24px 44px;text-align:center;position:relative;overflow:hidden;
+}
+.hero-header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:48px;background:var(--bg);border-radius:50% 50% 0 0/48px;}
+.hero-logo{font-family:'Fredoka One',sans-serif;font-size:44px;color:#fff;text-shadow:4px 4px 0 rgba(0,0,0,.15);}
+.hero-logo span{color:#FFF176;}
+.hero-sub{font-size:14px;color:rgba(255,255,255,.9);font-weight:700;margin-top:6px;}
+.hero-stars{display:flex;justify-content:center;gap:6px;margin:10px 0 16px;}
+.hstar{font-size:20px;animation:starPop 2s ease-in-out infinite;}
+.hstar:nth-child(2){animation-delay:.3s;}.hstar:nth-child(3){animation-delay:.6s;}.hstar:nth-child(4){animation-delay:.9s;}.hstar:nth-child(5){animation-delay:1.2s;}
+@keyframes starPop{0%,100%{transform:scale(1);}50%{transform:scale(1.4) rotate(15deg);}}
+
+/* =====================================================
+   CARDS & GRIDS
+   ===================================================== */
+.wrap{max-width:960px;margin:0 auto;padding:0 20px 80px;position:relative;z-index:1;}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
+
+.card{
+  background:var(--card);border-radius:var(--r);
+  box-shadow:var(--shadow);overflow:hidden;
+  cursor:pointer;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;
+}
+.card:hover{transform:translateY(-6px) scale(1.02);box-shadow:var(--shadow-lg);}
+.card:active{transform:scale(.97);}
+.card-art{height:110px;display:flex;align-items:center;justify-content:center;font-size:56px;transition:transform .3s;}
+.card:hover .card-art{transform:scale(1.15) rotate(5deg);}
+.card-body{padding:12px 14px 16px;}
+.card-title{font-family:'Fredoka One',sans-serif;font-size:16px;color:var(--text);margin-bottom:4px;}
+.card-desc{font-size:12px;color:var(--muted);line-height:1.4;}
+.badge{display:inline-block;margin-top:8px;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;}
+.badge-coragem{background:#FFE0B2;color:#E65100;}
+.badge-amor{background:#FCE4EC;color:#C62828;}
+.badge-amizade{background:#E8F5E9;color:#2E7D32;}
+.badge-respeito{background:#E3F2FD;color:#1565C0;}
+.badge-fé{background:#F3E5F5;color:#6A1B9A;}
+.badge-bondade{background:#E0F7FA;color:#00695C;}
+.badge-honestidade{background:#FFF9C4;color:#827717;}
+.badge-gratidão{background:#FBE9E7;color:#BF360C;}
+
+/* =====================================================
+   BUTTONS
+   ===================================================== */
+.btn{
+  font-family:'Fredoka One',sans-serif;font-size:16px;
+  padding:12px 28px;border:none;border-radius:50px;cursor:pointer;
+  transition:transform .15s,box-shadow .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-primary{background:linear-gradient(135deg,var(--orange),var(--red));color:#fff;box-shadow:0 5px 0 var(--orange-dark);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 0 var(--orange-dark);}
+.btn-primary:active{transform:translateY(3px);box-shadow:0 2px 0 var(--orange-dark);}
+.btn-ghost{background:#f5f5f5;color:var(--text);}
+.btn-ghost:hover{background:#e8e8e8;}
+.btn-danger{background:#FF6B6B;color:#fff;box-shadow:0 5px 0 #c0392b;}
+.btn-sm{font-size:13px;padding:8px 18px;}
+.btn-circle{width:42px;height:42px;padding:0;border-radius:50%;background:#f5f5f5;color:var(--text);font-size:16px;display:flex;align-items:center;justify-content:center;}
+.btn-circle:hover{background:#e0e0e0;}
+
+/* =====================================================
+   FORMS
+   ===================================================== */
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-weight:700;font-size:14px;color:var(--text);margin-bottom:6px;}
+.form-input{
+  width:100%;padding:12px 16px;border:2px solid #e0e0e0;border-radius:14px;
+  font-size:15px;font-family:'Nunito',sans-serif;background:#fafafa;
+  transition:border-color .2s,box-shadow .2s;outline:none;
+}
+.form-input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,159,67,.15);}
+.form-error{color:#E53935;font-size:12px;margin-top:4px;display:none;}
+.form-error.show{display:block;}
+
+/* =====================================================
+   AUTH SCREEN
+   ===================================================== */
+#screen-auth .auth-box{
+  max-width:440px;margin:0 auto;
+  background:var(--card);border-radius:var(--r-lg);
+  padding:32px;box-shadow:var(--shadow-lg);
+  margin-top:32px;
+}
+.auth-tabs{display:flex;gap:8px;margin-bottom:24px;}
+.auth-tab{
+  flex:1;font-family:'Fredoka One',sans-serif;font-size:16px;
+  padding:10px;border:2px solid #e0e0e0;border-radius:14px;
+  background:#fafafa;cursor:pointer;color:var(--muted);transition:all .2s;
+}
+.auth-tab.active{background:var(--orange);color:#fff;border-color:var(--orange);}
+.auth-form{display:none;}
+.auth-form.active{display:block;}
+
+/* =====================================================
+   CHILD SELECT SCREEN
+   ===================================================== */
+.child-card{
+  background:var(--card);border-radius:24px;padding:24px 18px;
+  box-shadow:var(--shadow);cursor:pointer;text-align:center;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;position:relative;
+}
+.child-card:hover{transform:translateY(-6px) scale(1.03);box-shadow:var(--shadow-lg);}
+.child-avatar{font-size:56px;margin-bottom:10px;animation:bobble 2.5s ease-in-out infinite;}
+@keyframes bobble{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+.child-name{font-family:'Fredoka One',sans-serif;font-size:20px;color:var(--text);}
+.child-level{font-size:13px;color:var(--muted);margin-top:4px;}
+.child-pts{
+  position:absolute;top:10px;right:12px;
+  background:var(--yellow);color:#5f4000;
+  font-family:'Fredoka One',sans-serif;font-size:12px;
+  padding:3px 10px;border-radius:20px;
+}
+.add-child-btn{
+  background:white;border:2px dashed #e0e0e0;border-radius:24px;
+  padding:24px 18px;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s;
+}
+.add-child-btn:hover{border-color:var(--orange);background:#FFF3E0;}
+
+/* =====================================================
+   AVATAR PICKER
+   ===================================================== */
+.avatar-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:12px 0 18px;}
+.av-opt{
+  font-size:32px;padding:10px;border-radius:14px;border:3px solid transparent;
+  cursor:pointer;text-align:center;transition:all .2s;background:#f5f5f5;
+}
+.av-opt:hover{background:#FFF3E0;border-color:var(--orange);}
+.av-opt.selected{background:#FFF3E0;border-color:var(--orange);transform:scale(1.15);}
+
+/* =====================================================
+   NAV TABS (child app)
+   ===================================================== */
+.nav-tabs{display:flex;justify-content:center;gap:8px;padding:20px 16px 10px;flex-wrap:wrap;}
+.nav-tab{
+  font-family:'Fredoka One',sans-serif;font-size:14px;padding:10px 20px;
+  border:none;border-radius:50px;cursor:pointer;
+  transition:transform .15s,box-shadow .15s;
+  box-shadow:0 4px 0 rgba(0,0,0,.15);
+}
+.nav-tab:hover{transform:translateY(-3px);}
+.nav-tab.active,.nav-tab:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.15);}
+.nav-tab.t-hist{background:#FF9F43;color:#fff;}
+.nav-tab.t-aven{background:#48DBFB;color:#0a3d62;}
+.nav-tab.t-bibl{background:#A29BFE;color:#fff;}
+.nav-tab.t-jogo{background:#55EFC4;color:#005a4e;}
+
+/* =====================================================
+   CHILD HEADER BAR
+   ===================================================== */
+.child-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px 0;max-width:960px;margin:0 auto;
+}
+.child-topbar-info{display:flex;align-items:center;gap:10px;}
+.topbar-avatar{font-size:32px;}
+.topbar-name{font-family:'Fredoka One',sans-serif;font-size:18px;color:var(--text);}
+.topbar-sub{font-size:12px;color:var(--muted);}
+.topbar-pts{
+  background:var(--yellow);color:#5f4000;
+  font-family:'Fredoka One',sans-serif;font-size:14px;
+  padding:6px 14px;border-radius:20px;
+}
+.level-bar-wrap{height:6px;background:#e0e0e0;border-radius:4px;width:80px;margin-top:4px;}
+.level-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--orange),var(--red));transition:width .5s;}
+
+/* =====================================================
+   SECTION PANELS
+   ===================================================== */
+.sec-panel{display:none;padding:12px 0;animation:fadeUp .3s;}
+.sec-panel.active{display:block;}
+.sec-title{font-family:'Fredoka One',sans-serif;font-size:24px;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+
+/* =====================================================
+   STORY READER
+   ===================================================== */
+.reader{
+  display:none;background:var(--card);border-radius:var(--r-lg);
+  padding:28px;box-shadow:var(--shadow-lg);margin:0 0 20px;
+  animation:readerIn .4s cubic-bezier(.34,1.56,.64,1);
+}
+.reader.open{display:block;}
+@keyframes readerIn{from{opacity:0;transform:scale(.94) translateY(16px);}to{opacity:1;transform:none;}}
+.reader-hdr{display:flex;align-items:center;gap:14px;margin-bottom:22px;padding-bottom:16px;border-bottom:2px dashed #f0f0f0;}
+.reader-emoji{font-size:44px;animation:bobble 2s ease-in-out infinite;}
+.reader-title{font-family:'Fredoka One',sans-serif;font-size:26px;color:var(--text);flex:1;}
+.reader-tts-btn{background:var(--blue);color:#0a3d62;border:none;border-radius:50%;width:40px;height:40px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s;}
+.reader-tts-btn:hover{transform:scale(1.1);}
+.reader-tts-btn.speaking{background:var(--orange);animation:ttsPulse 1s infinite;}
+@keyframes ttsPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+
+.page{display:none;animation:pageIn .4s;}
+.page.active{display:block;}
+@keyframes pageIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:none;}}
+.page-art{width:100%;height:160px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:74px;margin-bottom:18px;}
+.page-text{font-size:17px;line-height:1.9;color:var(--text);margin-bottom:20px;}
+.truth-box{background:linear-gradient(135deg,#FFF8E1,#FFFDE7);border-left:6px solid var(--yellow);border-radius:0 18px 18px 0;padding:18px 22px;margin:18px 0;animation:truthReveal .6s cubic-bezier(.34,1.56,.64,1);}
+@keyframes truthReveal{from{opacity:0;transform:scale(.9) translateX(-10px);}to{opacity:1;transform:none;}}
+.truth-label{font-family:'Fredoka One',sans-serif;font-size:14px;color:#F57C00;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.truth-text{font-size:17px;color:#4a3000;font-weight:800;line-height:1.5;}
+.page-nav{display:flex;justify-content:space-between;align-items:center;margin-top:20px;}
+.page-dots{display:flex;gap:8px;}
+.dot{width:12px;height:12px;border-radius:50%;background:#dfe6e9;transition:background .25s,transform .25s;}
+.dot.active{background:var(--orange);transform:scale(1.4);}
+
+/* =====================================================
+   GAMES
+   ===================================================== */
+.game-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px;}
+.game-card{background:var(--card);border-radius:var(--r);padding:22px 16px;box-shadow:var(--shadow);cursor:pointer;text-align:center;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;}
+.game-card:hover{transform:translateY(-5px) scale(1.02);box-shadow:var(--shadow-lg);}
+.game-icon{font-size:52px;display:block;margin-bottom:12px;transition:transform .3s;}
+.game-card:hover .game-icon{transform:scale(1.2) rotate(-5deg);}
+.game-name{font-family:'Fredoka One',sans-serif;font-size:18px;color:var(--text);}
+.game-desc{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4;}
+
+.game-panel{display:none;background:var(--card);border-radius:var(--r-lg);padding:28px;box-shadow:var(--shadow-lg);margin:0 0 20px;animation:fadeUp .4s;}
+.game-panel.open{display:block;}
+.gpanel-hdr{display:flex;align-items:center;gap:12px;margin-bottom:22px;padding-bottom:16px;border-bottom:2px dashed #f0f0f0;}
+.gpanel-title{font-family:'Fredoka One',sans-serif;font-size:22px;color:var(--text);flex:1;}
+
+/* QUIZ */
+.q-score{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;font-family:'Fredoka One',sans-serif;font-size:17px;color:var(--muted);}
+.prog-wrap{background:#f0f0f0;border-radius:10px;height:14px;margin-bottom:22px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--orange),var(--red));transition:width .5s cubic-bezier(.34,1.56,.64,1);}
+.quiz-q{font-family:'Fredoka One',sans-serif;font-size:21px;color:var(--text);margin-bottom:22px;text-align:center;line-height:1.4;}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.qopt{padding:16px 12px;border-radius:16px;border:3px solid #e0e0e0;background:#fff;cursor:pointer;font-size:15px;font-weight:700;color:var(--text);transition:all .2s;text-align:center;font-family:'Nunito',sans-serif;}
+.qopt:hover{border-color:var(--orange);background:#FFF3E0;transform:scale(1.03);}
+.qopt.correct{border-color:var(--green);background:#E8F5E9;color:#2E7D32;animation:pop .4s cubic-bezier(.34,1.56,.64,1);}
+.qopt.wrong{border-color:var(--red);background:#FFEBEE;color:#C62828;animation:shake .4s;}
+@keyframes pop{0%{transform:scale(1);}50%{transform:scale(1.08);}100%{transform:scale(1);}}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+.feedback{text-align:center;font-family:'Fredoka One',sans-serif;font-size:20px;padding:14px;border-radius:16px;display:none;margin-bottom:12px;}
+.feedback.show{display:block;animation:fadeUp .3s;}
+.feedback.ok{background:#E8F5E9;color:#2E7D32;}
+.feedback.no{background:#FFEBEE;color:#C62828;}
+
+/* MEMORY */
+.mem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+.mem-card{aspect-ratio:1;border-radius:14px;cursor:pointer;font-size:30px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--purple),var(--indigo));color:transparent;transition:transform .4s;user-select:none;box-shadow:0 4px 12px rgba(0,0,0,.12);}
+.mem-card.revealed{background:#fff;color:inherit;}
+.mem-card.matched{background:#E8F5E9;color:inherit;cursor:default;box-shadow:0 0 0 3px var(--green);}
+
+/* WORD */
+.word-disp{font-family:'Fredoka One',sans-serif;font-size:28px;text-align:center;letter-spacing:8px;color:var(--text);margin:10px 0 18px;padding:16px;background:#f8f8f8;border-radius:16px;}
+.word-hint{text-align:center;font-size:14px;color:var(--muted);margin-bottom:16px;}
+.keyboard{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px;}
+.kbtn{width:42px;height:42px;border-radius:10px;border:2px solid #e0e0e0;background:#fff;font-family:'Fredoka One',sans-serif;font-size:16px;cursor:pointer;transition:all .15s;color:var(--text);}
+.kbtn:hover{background:#FFF3E0;border-color:var(--orange);}
+.kbtn:disabled{cursor:default;}
+.kbtn.hit{background:#E8F5E9;border-color:var(--green);color:#2E7D32;}
+.kbtn.miss{background:#FFEBEE;border-color:var(--red);color:#C62828;}
+.lives{display:flex;gap:6px;justify-content:center;margin-bottom:10px;}
+.heart{font-size:22px;transition:transform .3s,opacity .3s;}
+.heart.lost{opacity:.2;transform:scale(.7);}
+
+/* COUNT */
+.count-scene{background:linear-gradient(135deg,#E0F7FA,#E8F5E9);border-radius:20px;padding:24px;text-align:center;margin-bottom:18px;min-height:120px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;font-size:40px;}
+.count-q{font-family:'Fredoka One',sans-serif;font-size:20px;color:var(--text);margin-bottom:16px;text-align:center;}
+.count-opts{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.cnt-btn{width:70px;height:70px;border-radius:50%;border:none;font-family:'Fredoka One',sans-serif;font-size:24px;cursor:pointer;transition:transform .2s,box-shadow .2s;box-shadow:0 5px 0 rgba(0,0,0,.15);}
+.cnt-btn:nth-child(1){background:#FF9F43;color:#fff;}
+.cnt-btn:nth-child(2){background:#48DBFB;color:#0a3d62;}
+.cnt-btn:nth-child(3){background:#A29BFE;color:#fff;}
+.cnt-btn:nth-child(4){background:#55EFC4;color:#005a4e;}
+.cnt-btn:hover{transform:translateY(-3px) scale(1.05);}
+.cnt-btn.correct-c{background:var(--green)!important;color:#005a4e!important;transform:scale(1.15);}
+.cnt-btn.wrong-c{background:var(--red)!important;color:#fff!important;animation:shake .3s;}
+
+/* MATCH */
+.match-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.match-col-lbl{font-family:'Fredoka One',sans-serif;font-size:14px;color:var(--muted);text-align:center;margin-bottom:8px;}
+.mitem{padding:12px 14px;border-radius:14px;border:3px solid #e0e0e0;background:#fff;cursor:pointer;font-size:13px;font-weight:700;transition:all .2s;text-align:center;color:var(--text);margin-bottom:8px;}
+.mitem:hover{border-color:var(--purple);background:#F3E5F5;}
+.mitem.sel{border-color:var(--purple);background:#EDE7F6;transform:scale(1.04);}
+.mitem.matched{border-color:var(--green);background:#E8F5E9;color:#2E7D32;cursor:default;}
+.mitem.wrongm{border-color:var(--red);background:#FFEBEE;animation:shake .3s;}
+
+/* ORDER */
+.order-step{background:#E8F5E9;border:2px solid var(--green);border-radius:12px;padding:10px 14px;margin-bottom:8px;font-size:14px;font-weight:700;color:#2E7D32;}
+.order-opt{padding:12px 14px;border-radius:14px;border:3px solid #e0e0e0;background:#fff;cursor:pointer;font-size:14px;font-weight:700;transition:all .2s;text-align:left;color:var(--text);margin-bottom:8px;width:100%;}
+.order-opt:hover{border-color:var(--teal);background:#E0F7FA;}
+
+/* CELEBRATION */
+.celeb{text-align:center;padding:28px 16px;animation:fadeUp .5s;}
+.celeb-icon{font-size:72px;animation:bounce .6s ease infinite alternate;display:block;margin-bottom:12px;}
+@keyframes bounce{from{transform:translateY(0);}to{transform:translateY(-16px);}}
+.celeb-title{font-family:'Fredoka One',sans-serif;font-size:28px;color:var(--text);margin-bottom:6px;}
+.celeb-sub{font-size:16px;color:var(--muted);margin-bottom:18px;}
+.celeb-stars{font-size:32px;letter-spacing:4px;margin-bottom:20px;}
+
+/* =====================================================
+   PARENT DASHBOARD
+   ===================================================== */
+#screen-parent{background:#F8F9FA;}
+.parent-header{background:#2d3436;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;}
+.parent-logo{font-family:'Fredoka One',sans-serif;font-size:22px;color:#fff;}
+.parent-logo span{color:var(--yellow);}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px;}
+.stat-card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.06);text-align:center;}
+.stat-num{font-family:'Fredoka One',sans-serif;font-size:32px;color:var(--orange);}
+.stat-lbl{font-size:13px;color:var(--muted);margin-top:4px;}
+.child-row{background:#fff;border-radius:16px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:12px;display:flex;align-items:center;gap:14px;}
+.child-row-avatar{font-size:40px;}
+.child-row-info{flex:1;}
+.child-row-name{font-family:'Fredoka One',sans-serif;font-size:18px;color:var(--text);}
+.child-row-sub{font-size:13px;color:var(--muted);}
+.child-row-pts{font-family:'Fredoka One',sans-serif;font-size:16px;color:var(--orange);}
+.prog-table{width:100%;border-collapse:collapse;font-size:14px;}
+.prog-table th{text-align:left;padding:8px 12px;border-bottom:2px solid #f0f0f0;color:var(--muted);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;}
+.prog-table td{padding:10px 12px;border-bottom:1px solid #f8f8f8;color:var(--text);}
+.prog-table tr:last-child td{border-bottom:none;}
+.ach-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;background:#FFF3E0;color:#E65100;font-size:12px;font-weight:700;margin:3px;}
+.section-lbl{font-family:'Fredoka One',sans-serif;font-size:20px;color:var(--text);margin:24px 0 12px;display:flex;align-items:center;gap:8px;}
+.age-pill{display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800;}
+.age-35{background:#FFE0B2;color:#E65100;}
+.age-68{background:#E0F7FA;color:#006064;}
+.age-912{background:#EDE7F6;color:#4527A0;}
+.chart-bar-wrap{margin-bottom:6px;}
+.chart-bar-lbl{font-size:13px;color:var(--muted);margin-bottom:3px;display:flex;justify-content:space-between;}
+.chart-bar-track{background:#f0f0f0;border-radius:6px;height:10px;overflow:hidden;}
+.chart-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--orange),var(--red));transition:width .8s cubic-bezier(.34,1.56,.64,1);}
+
+/* =====================================================
+   CONFETTI
+   ===================================================== */
+.cnf{position:fixed;pointer-events:none;z-index:9999;width:10px;height:10px;border-radius:2px;animation:cnfFall linear forwards;}
+@keyframes cnfFall{0%{transform:translateY(-20px) rotate(0);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
+
+/* =====================================================
+   LOADING
+   ===================================================== */
+#loading{position:fixed;inset:0;background:linear-gradient(135deg,#FF6B6B,#FFC947);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s;}
+#loading.hide{opacity:0;pointer-events:none;}
+#loading .logo{font-family:'Fredoka One',sans-serif;font-size:48px;color:#fff;text-shadow:4px 4px 0 rgba(0,0,0,.15);}
+#loading .logo span{color:#FFF176;}
+.loader-dots{display:flex;gap:10px;margin-top:20px;}
+.ldot{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.8);animation:ldotBounce .8s ease-in-out infinite;}
+.ldot:nth-child(2){animation-delay:.15s;}
+.ldot:nth-child(3){animation-delay:.3s;}
+@keyframes ldotBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-14px);}}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+@media(max-width:480px){
+  .hero-logo{font-size:34px;}
+  .quiz-opts{grid-template-columns:1fr;}
+  .mem-grid{gap:6px;}
+  .match-layout{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="logo">✨ Mundo <span>Encantado</span></div>
+  <div class="loader-dots"><div class="ldot"></div><div class="ldot"></div><div class="ldot"></div></div>
+</div>
+
+<!-- PARTICLES -->
+<div id="particles"></div>
+
+<!-- =====================================================
+     SCREEN: AUTH
+===================================================== -->
+<div class="screen" id="screen-auth">
+  <div class="hero-header">
+    <div class="hero-logo">✨ Mundo <span>Encantado</span></div>
+    <div class="hero-sub">Histórias, jogos e valores para crianças!</div>
+    <div class="hero-stars">
+      <span class="hstar">⭐</span><span class="hstar">🌟</span><span class="hstar">⭐</span><span class="hstar">🌟</span><span class="hstar">⭐</span>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="auth-box">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchTab('login')">Entrar</button>
+        <button class="auth-tab" onclick="switchTab('register')">Criar Conta</button>
+      </div>
+      <!-- LOGIN -->
+      <div class="auth-form active" id="tab-login">
+        <div class="form-group">
+          <label class="form-label">📧 Email</label>
+          <input type="email" class="form-input" id="login-email" placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">🔒 Senha</label>
+          <input type="password" class="form-input" id="login-pass" placeholder="••••••••">
+          <div class="form-error" id="login-error"></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">🚀 Entrar</button>
+        <p style="text-align:center;font-size:13px;color:var(--muted);margin-top:12px;">
+          <a href="#" onclick="switchTab('register')" style="color:var(--orange)">Ainda não tem conta? Criar agora</a>
+        </p>
+      </div>
+      <!-- REGISTER -->
+      <div class="auth-form" id="tab-register">
+        <div class="form-group">
+          <label class="form-label">👤 Seu nome</label>
+          <input type="text" class="form-input" id="reg-name" placeholder="Maria Santos">
+        </div>
+        <div class="form-group">
+          <label class="form-label">📧 Email</label>
+          <input type="email" class="form-input" id="reg-email" placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">🔒 Senha (mín. 6 caracteres)</label>
+          <input type="password" class="form-input" id="reg-pass" placeholder="••••••••">
+          <div class="form-error" id="reg-error"></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doRegister()">✨ Criar Conta Gratuita</button>
+        <p style="text-align:center;font-size:11px;color:var(--faint);margin-top:14px;line-height:1.6;">
+          Ao criar conta, você concorda com nossos Termos de Uso e Política de Privacidade. Seus dados são protegidos.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =====================================================
+     SCREEN: CHILD SELECT
+===================================================== -->
+<div class="screen" id="screen-select">
+  <div class="hero-header">
+    <div class="hero-logo">✨ Mundo <span>Encantado</span></div>
+    <div class="hero-sub" id="welcome-name">Bem-vindo!</div>
+    <div class="hero-stars"><span class="hstar">⭐</span><span class="hstar">🌟</span><span class="hstar">⭐</span></div>
+  </div>
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 20px;">
+      <div style="font-family:'Fredoka One',sans-serif;font-size:22px;color:var(--text);">Quem vai aprender hoje? 🎉</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="goParentDashboard()">📊 Painel</button>
+        <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sair</button>
+      </div>
+    </div>
+    <div class="grid-3" id="children-list"></div>
+
+    <!-- ADD CHILD MODAL -->
+    <div id="add-child-form" style="display:none;background:var(--card);border-radius:var(--r-lg);padding:28px;box-shadow:var(--shadow-lg);margin-top:20px;">
+      <div style="font-family:'Fredoka One',sans-serif;font-size:22px;color:var(--text);margin-bottom:20px;">➕ Adicionar Criança</div>
+      <div class="form-group">
+        <label class="form-label">👦 Nome da criança</label>
+        <input type="text" class="form-input" id="child-name" placeholder="Pedro">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🎂 Idade</label>
+        <input type="number" class="form-input" id="child-age" min="3" max="12" placeholder="7">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🎭 Escolha um avatar</label>
+        <div class="avatar-grid" id="avatar-grid"></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" onclick="saveChild()">✅ Salvar</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('add-child-form').style.display='none'">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =====================================================
+     SCREEN: CHILD APP
+===================================================== -->
+<div class="screen" id="screen-app">
+  <!-- Top bar -->
+  <div class="hero-header" style="padding-bottom:52px;">
+    <div class="child-topbar">
+      <div class="child-topbar-info">
+        <div class="topbar-avatar" id="app-avatar">🦋</div>
+        <div>
+          <div class="topbar-name" id="app-name">Nome</div>
+          <div class="topbar-sub" id="app-level">Nível 1</div>
+          <div class="level-bar-wrap"><div class="level-bar" id="app-levelbar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="topbar-pts" id="app-pts">⭐ 0</div>
+        <button class="btn-circle" onclick="goBackToSelect()" title="Trocar perfil">🔄</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="wrap" style="padding-top:0;">
+    <div class="nav-tabs">
+      <button class="nav-tab t-hist active" onclick="showTab('hist')">📖 Histórias</button>
+      <button class="nav-tab t-aven" onclick="showTab('aven')">🗺️ Aventuras</button>
+      <button class="nav-tab t-bibl" onclick="showTab('bibl')">✝️ Bíblicas</button>
+      <button class="nav-tab t-jogo" onclick="showTab('jogo')">🎮 Jogos</button>
+    </div>
+
+    <!-- Story Reader -->
+    <div class="reader" id="reader">
+      <div class="reader-hdr">
+        <span id="r-emoji" style="font-size:44px;animation:bobble 2s ease-in-out infinite">📖</span>
+        <span class="reader-title" id="r-title">Título</span>
+        <button class="reader-tts-btn" id="tts-btn" onclick="toggleTTS()" title="Ouvir história">🔊</button>
+        <button class="btn-circle" onclick="closeReader()">✕</button>
+      </div>
+      <div id="story-pages"></div>
+    </div>
+
+    <!-- Game Panels -->
+    <div class="game-panel" id="panel-quiz">
+      <div class="gpanel-hdr"><span style="font-size:28px">🧠</span><span class="gpanel-title">Quiz dos Valores</span><button class="btn-circle" onclick="closePanel('quiz')">✕</button></div>
+      <div id="quiz-body"></div>
+    </div>
+    <div class="game-panel" id="panel-memory">
+      <div class="gpanel-hdr"><span style="font-size:28px">🃏</span><span class="gpanel-title">Jogo da Memória</span><button class="btn-circle" onclick="closePanel('memory')">✕</button></div>
+      <div id="memory-body"></div>
+    </div>
+    <div class="game-panel" id="panel-word">
+      <div class="gpanel-hdr"><span style="font-size:28px">🔤</span><span class="gpanel-title">Descubra a Palavra</span><button class="btn-circle" onclick="closePanel('word')">✕</button></div>
+      <div id="word-body"></div>
+    </div>
+    <div class="game-panel" id="panel-count">
+      <div class="gpanel-hdr"><span style="font-size:28px">🔢</span><span class="gpanel-title">Contando com Deus</span><button class="btn-circle" onclick="closePanel('count')">✕</button></div>
+      <div id="count-body"></div>
+    </div>
+    <div class="game-panel" id="panel-match">
+      <div class="gpanel-hdr"><span style="font-size:28px">💡</span><span class="gpanel-title">Liga os Valores</span><button class="btn-circle" onclick="closePanel('match')">✕</button></div>
+      <div id="match-body"></div>
+    </div>
+    <div class="game-panel" id="panel-order">
+      <div class="gpanel-hdr"><span style="font-size:28px">📋</span><span class="gpanel-title">Ordem da História</span><button class="btn-circle" onclick="closePanel('order')">✕</button></div>
+      <div id="order-body"></div>
+    </div>
+
+    <!-- Sections -->
+    <div class="sec-panel active" id="sec-hist">
+      <div class="sec-title">📖 Histórias Educativas</div>
+      <div class="grid-2" id="cards-hist"></div>
+    </div>
+    <div class="sec-panel" id="sec-aven">
+      <div class="sec-title">🗺️ Histórias de Aventura</div>
+      <div class="grid-2" id="cards-aven"></div>
+    </div>
+    <div class="sec-panel" id="sec-bibl">
+      <div class="sec-title">✝️ Histórias Bíblicas</div>
+      <div class="grid-2" id="cards-bibl"></div>
+    </div>
+    <div class="sec-panel" id="sec-jogo">
+      <div class="sec-title">🎮 Jogos Educativos</div>
+      <div class="game-grid">
+        <div class="game-card" onclick="openGame('quiz')"><span class="game-icon">🧠</span><div class="game-name">Quiz dos Valores</div><div class="game-desc">Responda sobre amizade, coragem e respeito!</div></div>
+        <div class="game-card" onclick="openGame('memory')"><span class="game-icon">🃏</span><div class="game-name">Jogo da Memória</div><div class="game-desc">Encontre os pares e treine a memória!</div></div>
+        <div class="game-card" onclick="openGame('word')"><span class="game-icon">🔤</span><div class="game-name">Descubra a Palavra</div><div class="game-desc">Adivinhe palavras sobre valores!</div></div>
+        <div class="game-card" onclick="openGame('count')"><span class="game-icon">🔢</span><div class="game-name">Contando com Deus</div><div class="game-desc">Conte elementos das histórias bíblicas!</div></div>
+        <div class="game-card" onclick="openGame('match')"><span class="game-icon">💡</span><div class="game-name">Liga os Valores</div><div class="game-desc">Conecte situações aos valores certos!</div></div>
+        <div class="game-card" onclick="openGame('order')"><span class="game-icon">📋</span><div class="game-name">Ordem da História</div><div class="game-desc">Coloque os acontecimentos em ordem!</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =====================================================
+     SCREEN: PARENT DASHBOARD
+===================================================== -->
+<div class="screen" id="screen-parent">
+  <div class="parent-header">
+    <div class="parent-logo">📊 Painel dos <span>Pais</span></div>
+    <button class="btn btn-ghost btn-sm" onclick="goBackToSelect()">← Voltar</button>
+  </div>
+  <div class="wrap" style="padding-top:24px;">
+    <div class="section-lbl">👨‍👩‍👧‍👦 Minhas Crianças</div>
+    <div id="parent-children-list"></div>
+
+    <div id="child-detail" style="display:none;">
+      <div class="section-lbl" id="detail-name">📈 Progresso</div>
+      <div class="stat-grid" id="detail-stats"></div>
+      <div class="section-lbl">🏆 Conquistas</div>
+      <div id="detail-achievements"></div>
+      <div class="section-lbl">📅 Atividade por Categoria</div>
+      <div id="detail-chart" style="background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:16px;"></div>
+      <div class="section-lbl">📋 Histórico Recente</div>
+      <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.06);">
+        <table class="prog-table"><thead><tr><th>Atividade</th><th>Tipo</th><th>Pontos</th><th>Data</th></tr></thead>
+        <tbody id="detail-history"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// DATA
+// =====================================================
+const AGE_GROUPS={'3-5':{label:'3 a 5 anos',icon:'🐣',color:'#FFB347'},'6-8':{label:'6 a 8 anos',icon:'🌱',color:'#4ECDC4'},'9-12':{label:'9 a 12 anos',icon:'🚀',color:'#A29BFE'}};
+const AVATARS=['🦋','🐯','🦁','🐬','🦄','🐸','🦊','🐼','🐧','🦅','🌻','⭐','🚀','🎈','🌈'];
+
+const ALL_STORIES={
+  hist:[
+    {id:'borboleta',ageGroup:'3-5',title:'A Borboleta Corajosa',emoji:'🦋',color:'#FFF3E0',desc:'Lila supera o medo de voar.',badge:'coragem',badgeLabel:'Coragem',pages:[{art:'🦋',bg:'#FFF3E0',text:'Era uma vez uma borboleta chamada Lila que tinha muito medo de voar alto. Sempre ficava perto das flores baixinhas.'},{art:'🌸',bg:'#FCE4EC',text:'Sua amiga Mel disse: "Lila, você vai descobrir coisas lindas se tentar! Eu acredito em você!"'},{art:'🌈',bg:'#E3F2FD',text:'Com o coração acelerado, Lila abriu suas asas coloridas e voou! O mundo visto de cima era incrível!'},{art:'⭐',bg:'#F3E5F5',text:'Lila aprendeu que o medo some quando a gente tenta!',truth:'🦁 Coragem é tentar mesmo com medo. Você também consegue!'}]},
+    {id:'peixinho',ageGroup:'3-5',title:'O Peixinho Gentil',emoji:'🐟',color:'#E3F2FD',desc:'Azul ajuda uma tartaruga.',badge:'bondade',badgeLabel:'Bondade',pages:[{art:'🐟',bg:'#E3F2FD',text:'Azul era um peixinho pequeno que vivia no grande oceano.'},{art:'🪸',bg:'#E8F5E9',text:'Encontrou uma tartaruga presa em algas. Todos passaram sem ajudar. Mas Azul ficou.'},{art:'💪',bg:'#FFF3E0',text:'Com muito esforço, libertou a tartaruga. "Obrigada, herói!"'},{art:'🌊',bg:'#E0F7FA',text:'Todos no oceano aprenderam: bondade não tem tamanho!',truth:'💙 Uma gentileza pequena pode mudar o dia de alguém!'}]},
+    {id:'amigos-floresta',ageGroup:'6-8',title:'Os Amigos da Floresta',emoji:'🌳',color:'#E8F5E9',desc:'Urso, Coelho e Raposa descobrem a amizade.',badge:'amizade',badgeLabel:'Amizade',pages:[{art:'🐻',bg:'#FFF8E1',text:'Urso, Coelho e Raposa eram vizinhos mas viviam sozinhos. A floresta parecia vazia.'},{art:'🌧️',bg:'#E3F2FD',text:'Uma tempestade derrubou a toca do Coelho. Ele ficou com frio e assustado.'},{art:'🏠',bg:'#E8F5E9',text:'Urso e Raposa ajudaram. Juntos construíram uma toca nova e mais bonita!'},{art:'🤝',bg:'#FCE4EC',text:'Desde aquele dia os três se tornaram inseparáveis!',truth:'👫 Amizade verdadeira aparece nas horas difíceis!'}]},
+    {id:'arco-iris',ageGroup:'6-8',title:'A Verdade do Arco-Íris',emoji:'🌈',color:'#E8EAF6',desc:'Pedro aprende sobre honestidade.',badge:'honestidade',badgeLabel:'Honestidade',pages:[{art:'🌈',bg:'#E8EAF6',text:'Pedro encontrou uma carteira cheia de dinheiro. Ninguém estava olhando...'},{art:'🤔',bg:'#FFF9C4',text:'Sua mãe dizia: "Fazer o certo, mesmo sem ninguém ver, é o que nos torna grandes."'},{art:'👴',bg:'#FFF3E0',text:'Pedro entregou a carteira ao dono. O senhor chorou de alegria!'},{art:'⭐',bg:'#E8F5E9',text:'A honestidade vale mais que qualquer recompensa!',truth:'🌟 Honestidade é fazer o certo mesmo quando ninguém está olhando!'}]},
+    {id:'formiga',ageGroup:'9-12',title:'A Formiga Persistente',emoji:'🐜',color:'#FFF8E1',desc:'Determinação supera obstáculos.',badge:'coragem',badgeLabel:'Determinação',pages:[{art:'🐜',bg:'#FFF8E1',text:'Mia era uma pequena formiga com um grande sonho: construir o formigueiro mais alto da floresta.'},{art:'🌧️',bg:'#E3F2FD',text:'A chuva destruiu sua construção três vezes. Cada vez ela levantava e recomeçava mais forte.'},{art:'🏗️',bg:'#E8F5E9',text:'Depois de meses, o formigueiro de Mia era o mais alto e resistente de todos!'},{art:'🌟',bg:'#FFF3E0',text:'Não é o tamanho que define o que conseguimos, mas a vontade de continuar.',truth:'💪 Persistência é cair, levantar e tentar de novo. Os maiores sonhos são conquistados devagar!'}]},
+    {id:'carta',ageGroup:'9-12',title:'A Carta para o Futuro',emoji:'✉️',color:'#E8EAF6',desc:'Responsabilidade e escolhas.',badge:'respeito',badgeLabel:'Responsabilidade',pages:[{art:'✉️',bg:'#E8EAF6',text:'Lucas tinha 11 anos quando seu avô lhe deu uma carta: "Abra em 10 anos." Dentro havia uma pergunta: Que pessoa você quer ser?'},{art:'🤔',bg:'#FFF9C4',text:'A partir daí, Lucas pensava em cada escolha: "Isso é o que a pessoa que quero ser faria?"'},{art:'🌱',bg:'#E8F5E9',text:'Ele ajudou colegas, disse a verdade e estudou mesmo quando queria brincar.'},{art:'🏆',bg:'#F3E5F5',text:'Aos 21, abriu a carta e sorriu. Havia se tornado a pessoa que sonhou.',truth:'🌟 Cada pequena escolha hoje constrói a pessoa que você será amanhã!'}]}
+  ],
+  aven:[
+    {id:'tesouro',ageGroup:'6-8',title:'O Tesouro do Fundo do Mar',emoji:'🌊',color:'#E0F7FA',desc:'Marina mergulha com coragem.',badge:'coragem',badgeLabel:'Coragem',pages:[{art:'🤿',bg:'#E0F7FA',text:'Marina sempre sonhou em mergulhar fundo. Todos diziam que era perigoso, mas ela estudou e se preparou.'},{art:'🐠',bg:'#E3F2FD',text:'No fundo encontrou um mapa misterioso dentro de uma concha brilhante.'},{art:'💎',bg:'#F3E5F5',text:'O tesouro era uma coleção de conchas raras jamais vistas pela ciência!'},{art:'🌟',bg:'#FFF9C4',text:'Ela compartilhou com o mundo. Sua coragem trouxe descobertas para toda a humanidade!',truth:'🔬 O maior tesouro é o conhecimento. Explore, aprenda e compartilhe!'}]},
+    {id:'montanha',ageGroup:'6-8',title:'A Montanha das Estrelas',emoji:'⛰️',color:'#F3E5F5',desc:'Pedro e Ana aprendem respeito.',badge:'respeito',badgeLabel:'Respeito',pages:[{art:'⛰️',bg:'#F3E5F5',text:'Pedro e Ana queriam ver as estrelas do alto da montanha. Mas Pedro era rápido demais.'},{art:'😢',bg:'#FCE4EC',text:'"Você nunca me espera!" Ana chorou. Pedro parou e sentiu vergonha.'},{art:'🤝',bg:'#E8F5E9',text:'De mãos dadas, subiram juntos. No topo, as estrelas eram ainda mais bonitas.'},{art:'🌌',bg:'#E8EAF6',text:'"Chegamos juntos", disse Pedro. "E foi melhor assim", completou Ana.',truth:'🌟 Respeitar é caminhar no ritmo de quem você ama. Juntos chegamos mais longe!'}]},
+    {id:'floresta',ageGroup:'3-5',title:'A Floresta Encantada',emoji:'🌲',color:'#E8F5E9',desc:'Três amigos perdidos aprendem cooperação.',badge:'amizade',badgeLabel:'Cooperação',pages:[{art:'🌲',bg:'#E8F5E9',text:'Tomás, Bia e Bento entraram na floresta encantada e de repente estavam perdidos!'},{art:'😱',bg:'#FFF9C4',text:'Tomás queria ir para a esquerda, Bia para a direita. Bento ficou quieto no meio.'},{art:'🦜',bg:'#E0F7FA',text:'Um papagaio disse: "Juntos vocês são mais fortes! Escutem um ao outro!"'},{art:'🏠',bg:'#FFF3E0',text:'Cada um usou seu talento e juntos encontraram o caminho de volta!',truth:'🤝 Trabalhar em equipe e ouvir os amigos nos leva mais longe do que ir sozinho!'}]},
+    {id:'deserto',ageGroup:'9-12',title:'O Deserto dos Desafios',emoji:'🏜️',color:'#FFF8E1',desc:'Sofia descobre força interior.',badge:'coragem',badgeLabel:'Resiliência',pages:[{art:'🏜️',bg:'#FFF8E1',text:'Sofia se perdeu no deserto durante uma expedição. O sol estava forte e o medo tomava conta.'},{art:'🌵',bg:'#E8F5E9',text:'Ela lembrou do avô: "O deserto tem segredos. Observe os animais — eles sabem onde há água."'},{art:'🦅',bg:'#E0F7FA',text:'Uma águia voava em círculos. Sofia a seguiu. Havia orvalho e um caminho de volta!'},{art:'🌅',bg:'#FFF3E0',text:'De volta ao acampamento, entendeu: dentro de cada pessoa existe uma força enorme.',truth:'💪 Quando as coisas ficam difíceis: respire, pense e use o que você sabe!'}]}
+  ],
+  bibl:[
+    {id:'davi',ageGroup:'3-5',title:'Davi e Golias',emoji:'⚔️',color:'#FFF9C4',desc:'Um menino com fé vence um gigante.',badge:'coragem',badgeLabel:'Coragem',pages:[{art:'👦',bg:'#FFF9C4',text:'Davi era um menino pequeno que cuidava de ovelhas. Mas tinha um coração enorme cheio de fé.'},{art:'⚔️',bg:'#FFEBEE',text:'O gigante Golias assustava o povo. Nenhum soldado tinha coragem. Davi disse: "Eu vou!"'},{art:'🪨',bg:'#E8F5E9',text:'Com uma pedra e muita fé, Davi acertou o gigante. O povo ficou maravilhado!'},{art:'🙏',bg:'#F3E5F5',text:'Davi ganhou não porque era forte, mas porque tinha fé em Deus.',truth:'⭐ Com fé, até os gigantes da vida podem ser vencidos!'}]},
+    {id:'samaritano',ageGroup:'3-5',title:'O Bom Samaritano',emoji:'💛',color:'#FFF3E0',desc:'A história do amor ao próximo.',badge:'amor',badgeLabel:'Amor ao Próximo',pages:[{art:'🚶',bg:'#FFF9C4',text:'Um homem foi assaltado e deixado ferido à beira da estrada. Precisava muito de ajuda.'},{art:'😔',bg:'#FFEBEE',text:'Duas pessoas passaram e continuaram caminhando sem ajudar.'},{art:'💛',bg:'#FFF3E0',text:'Um samaritano parou, tratou as feridas e pagou por seu cuidado!'},{art:'🤗',bg:'#E8F5E9',text:'Jesus disse: nosso próximo é qualquer pessoa que precisar de nós.',truth:'❤️ Amar ao próximo é ajudar quem precisa, sem esperar nada em troca!'}]},
+    {id:'noe',ageGroup:'6-8',title:'Noé e a Arca',emoji:'🌈',color:'#E0F7FA',desc:'A fé de Noé salvou tudo.',badge:'fé',badgeLabel:'Fé',pages:[{art:'🌧️',bg:'#E3F2FD',text:'Deus pediu a Noé para construir uma arca enorme. Todos riam. Mas Noé obedeceu com fé.'},{art:'🐘',bg:'#E8F5E9',text:'Dois de cada animal foram entrando: elefantes, girafas, leões... Um espetáculo!'},{art:'🌊',bg:'#E0F7FA',text:'A chuva veio forte por 40 dias. Mas dentro da arca todos estavam seguros.'},{art:'🌈',bg:'#FFF9C4',text:'Um lindo arco-íris apareceu: a promessa de Deus para sempre!',truth:'🌈 Quando Deus faz uma promessa, Ele sempre cumpre!'}]},
+    {id:'jonas',ageGroup:'6-8',title:'Jonas e o Peixão',emoji:'🐋',color:'#E3F2FD',desc:'Aprender a obedecer com amor.',badge:'respeito',badgeLabel:'Obediência',pages:[{art:'⛵',bg:'#E3F2FD',text:'Deus pediu a Jonas que fosse a Nínive. Mas Jonas teve medo e fugiu de navio.'},{art:'🌊',bg:'#E0F7FA',text:'Uma tempestade sacudiu o mar. Jonas pediu para ser jogado ao mar.'},{art:'🐋',bg:'#E8EAF6',text:'Um peixão engoliu Jonas! Por três dias Jonas orou e se arrependeu.'},{art:'🌅',bg:'#FFF9C4',text:'O peixão jogou Jonas na praia. Desta vez ele cumpriu sua missão!',truth:'🕊️ Quando Deus nos pede algo, o melhor é obedecer!'}]},
+    {id:'daniel',ageGroup:'9-12',title:'Daniel na Cova dos Leões',emoji:'🦁',color:'#FFF3E0',desc:'Fé mais forte que qualquer leão.',badge:'fé',badgeLabel:'Fé',pages:[{art:'🙏',bg:'#FFF3E0',text:'Daniel orava a Deus três vezes por dia. Isso incomodava seus inimigos.'},{art:'📜',bg:'#FFF9C4',text:'A lei proibiu orações. Mas Daniel continuou. Sua fé era maior que o medo.'},{art:'🦁',bg:'#FFEBEE',text:'Daniel foi jogado na cova dos leões. Deus enviou um anjo para fechar a boca deles!'},{art:'🌟',bg:'#E8F5E9',text:'Daniel saiu ileso! O rei declarou que o Deus de Daniel era o Deus verdadeiro.',truth:'🦁 A fé em Deus é mais forte que qualquer medo. Ore sempre!'}]},
+    {id:'jose',ageGroup:'9-12',title:'José e o Casaco Colorido',emoji:'🌈',color:'#FCE4EC',desc:'O perdão que transformou uma família.',badge:'amor',badgeLabel:'Perdão',pages:[{art:'🧥',bg:'#FCE4EC',text:'José era o filho favorito e ganhou um casaco com todas as cores. Seus irmãos ficaram com ciúme.'},{art:'😢',bg:'#E3F2FD',text:'Os irmãos venderam José como escravo para o Egito. Parecia que tudo havia terminado.'},{art:'👑',bg:'#FFF9C4',text:'Deus estava com José. Com sabedoria, ele se tornou o segundo homem mais poderoso do Egito!'},{art:'🤗',bg:'#E8F5E9',text:'Quando os irmãos pediram ajuda, José os abraçou: "Eu perdoo. Foi Deus que me trouxe aqui!"',truth:'💜 Perdoar é difícil, mas é o mais bonito que podemos fazer. O perdão cura o coração!'}]},
+    {id:'ester',ageGroup:'9-12',title:'A Corajosa Rainha Ester',emoji:'👸',color:'#FCE4EC',desc:'Uma jovem que salvou seu povo.',badge:'coragem',badgeLabel:'Coragem',pages:[{art:'👸',bg:'#FCE4EC',text:'Ester era uma jovem judia que se tornou rainha da Pérsia.'},{art:'⚠️',bg:'#FFEBEE',text:'Um homem mau planejava matar todos os judeus. Ester era a única que podia salvar seu povo.'},{art:'🙏',bg:'#F3E5F5',text:'Entrar diante do rei sem convite era punido com morte. Ester disse: "Se morrer, morro. Mas vou tentar!"'},{art:'🏆',bg:'#E8F5E9',text:'O rei ouviu Ester. O plano mau foi desfeito e o povo foi salvo!',truth:'👸 Às vezes somos colocados em lugares especiais para fazer o bem. Seja corajoso na hora certa!'}]}
+  ]
+};
+
+const QUIZZES={
+  '3-5':[
+    {q:'🤔 O que fazemos quando vemos alguém chorando?',opts:['Abraçamos e consolamos','Rimos','Saímos correndo','Ignoramos'],c:0,exp:'Confortar é mostrar amor! 💛'},
+    {q:'🤝 O que é um bom amigo?',opts:['Quem briga sempre','Quem ajuda e cuida','Quem pega os brinquedos','Quem fica sozinho'],c:1,exp:'Amigos se ajudam! 👫'},
+    {q:'🌟 O que fazemos depois de ganhar algo?',opts:['Ficamos calados','Dizemos obrigado!','Pedimos mais','Jogamos fora'],c:1,exp:'Gratidão é importante! 🙏'},
+    {q:'🐾 Como tratamos os animais?',opts:['Com carinho e cuidado','Com maldade','Ignorando','Com susto'],c:0,exp:'Animais merecem amor! 🐾'},
+    {q:'💪 O que é ser corajoso?',opts:['Não ter medo nunca','Tentar mesmo com medo','Ser muito grande','Nunca chorar'],c:1,exp:'Coragem é tentar mesmo assustado!'}
+  ],
+  '6-8':[
+    {q:'🦁 Coragem significa...',opts:['Não ter medo de nada','Tentar mesmo com medo','Ser o mais forte','Nunca pedir ajuda'],c:1,exp:'Coragem é agir apesar do medo! 💪'},
+    {q:'🌟 Se achar uma carteira no chão, você...',opts:['Fica com o dinheiro','Entrega a um adulto','Joga fora','Corre embora'],c:1,exp:'Honestidade é sempre fazer o certo!'},
+    {q:'😤 Quando ficamos com raiva, o melhor é...',opts:['Bater','Gritar muito','Respirar e conversar','Quebrar coisas'],c:2,exp:'Controlar emoções é maturidade! 🧘'},
+    {q:'👂 Quando alguém está falando, devemos...',opts:['Interromper','Olhar o celular','Ouvir com atenção','Brincar'],c:2,exp:'Ouvir com atenção é respeito!'},
+    {q:'🌱 O que é gratidão?',opts:['Pedir mais','Agradecer pelo que temos','Reclamar de tudo','Ignorar'],c:1,exp:'Gratidão atrai mais coisas boas! 🙏'},
+    {q:'🤔 Amizade verdadeira é...',opts:['Só brincar','Estar presente nos momentos difíceis','Guardar tudo','Fazer o que quiser'],c:1,exp:'Amizade é presença! 💙'}
+  ],
+  '9-12':[
+    {q:'🧠 Responsabilidade significa...',opts:['Fazer o que quiser','Cumprir deveres e honrar compromissos','Culpar os outros','Evitar tarefas'],c:1,exp:'Ser responsável é cumprir o que prometemos!'},
+    {q:'💬 Comunicação saudável inclui...',opts:['Falar sem ouvir','Gritar para impor','Ouvir e expressar com respeito','Ignorar o outro'],c:2,exp:'Comunicação respeitosa resolve conflitos!'},
+    {q:'🌍 Cuidar do meio ambiente é um ato de...',opts:['Inconveniência','Amor ao próximo e às futuras gerações','Obrigação sem sentido','Fraqueza'],c:1,exp:'Cuidar do planeta é amar quem vem depois!'},
+    {q:'💜 Perdoar alguém que nos machucou...',opts:['É sinal de fraqueza','Significa esquecer tudo','Nos liberta e nos faz crescer','É impossível'],c:2,exp:'Perdão liberta quem perdoa!'},
+    {q:'🤝 Empatia significa...',opts:['Sentir pena','Se colocar no lugar do outro','Ignorar problemas alheios','Dar conselhos sem pedir'],c:1,exp:'Empatia é entender como o outro se sente!'},
+    {q:'🌟 Liderança verdadeira é...',opts:['Mandar nos outros','Servir e inspirar','Ter o poder','Ser o mais popular'],c:1,exp:'Um líder de verdade serve e inspira!'},
+    {q:'🔍 Pensamento crítico serve para...',opts:['Criticar todos','Questionar e analisar antes de concluir','Desafiar professores','Desconfiar de tudo'],c:1,exp:'Pensar antes de concluir é sabedoria!'}
+  ]
+};
+
+const MEMORY_PAIRS={'3-5':['🦋','🐟','🌈','⭐','🐣','🌸','💛','🎈'],'6-8':['🦁','🐋','🌈','⚔️','🙏','👑','🕊️','⭐'],'9-12':['📖','🏆','🌍','💡','🎯','⚖️','🔬','🌱']};
+
+const WORD_GAMES={
+  '3-5':[{word:'AMOR',hint:'❤️ O que sentimos pelos amigos e família'},{word:'PAZ',hint:'🕊️ Quando todos vivem em harmonia'},{word:'BOM',hint:'😊 Quando fazemos coisas certas'},{word:'AJUDA',hint:'🤝 O que damos a quem precisa'}],
+  '6-8':[{word:'CORAGEM',hint:'💪 Tentar mesmo com medo'},{word:'AMIZADE',hint:'👫 Laço especial entre pessoas que se cuidam'},{word:'RESPEITO',hint:'🌟 Como devemos tratar todos'},{word:'BONDADE',hint:'💛 Fazer bem sem esperar nada'},{word:'PERDAO',hint:'💜 Escolher não guardar mágoa'}],
+  '9-12':[{word:'GRATIDAO',hint:'🙏 Agradecer pelas bênçãos recebidas'},{word:'HONESTIDADE',hint:'✨ Falar a verdade sempre'},{word:'PERSEVERANCA',hint:'🏃 Não desistir diante dos obstáculos'},{word:'SOLIDARIEDADE',hint:'🤲 Ajudar o próximo em necessidade'},{word:'EMPATIA',hint:'💙 Se colocar no lugar do outro'}]
+};
+
+const COUNT_ROUNDS=[{scene:'🐑🐑🐑🐑🐑🐑🐑',q:'Quantas ovelhas Davi cuidava?',answer:7,opts:[5,7,8,9]},{scene:'🐟🐟🐟🐟🐟',q:'Quantos pães havia na cesta?',answer:5,opts:[3,5,6,7]},{scene:'🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟',q:'Quantas estrelas aparecem?',answer:12,opts:[10,11,12,14]},{scene:'🐘🐘🦒🦒🦁🦁🐦🐦',q:'Quantos animais entraram na arca?',answer:8,opts:[6,7,8,9]},{scene:'🌈🌈🌈🌈🌈🌈🌈',q:'Quantos arco-íris você vê?',answer:7,opts:[5,6,7,8]}];
+
+const MATCH_DATA={situations:['Vi alguém chorando','Errei e magoei alguém','Ganhei algo especial','Um amigo está com dificuldade','Vi lixo no chão'],values:['Amor ao próximo','Pedido de desculpas','Gratidão','Amizade','Respeito ao ambiente'],correct:{0:0,1:1,2:2,3:3,4:4}};
+
+const ORDER_STORIES=[{title:'Jonas e o Peixão',steps:['🙏 Jonas orou dentro do peixão','⛵ Jonas fugiu de navio','🌅 Jonas foi a Nínive','🌊 Jonas caiu no mar','🐋 O peixão engoliu Jonas'],correct:[1,3,4,0,2]},{title:'Davi e Golias',steps:['🪨 Davi atirou a pedra','👦 Davi cuidava de ovelhas','⚔️ Golias ameaçava o povo','🏆 Israel foi salvo','💪 Davi se ofereceu para lutar'],correct:[1,2,4,0,3]}];
+
+const ACHIEVEMENTS={first_story:{icon:'📖',title:'Primeira História!'},story_5:{icon:'📚',title:'Leitor Dedicado'},game_10:{icon:'🎮',title:'Gamer dos Valores'},perfect_quiz:{icon:'🌟',title:'Quiz Perfeito!'},level_5:{icon:'⭐',title:'Nível 5!'},bible_fan:{icon:'✝️',title:'Amigo da Bíblia'}};
+
+// =====================================================
+// STATE
+// =====================================================
+let FB=null;
+let currentUser=null, currentParentData=null;
+let activeChild=null;
+let currentStoryData=null, currentPage=0;
+let quizIdx=0, quizScore=0, quizAnswered=false;
+let memCards=[], memFlipped=[], memMatched=0, memMoves=0, memLock=false;
+let wordCurrent=null, wordGuessed=[], wordWrong=[];
+let countIdx=0, countScore=0;
+let matchSel1=null, matchSel2=null, matchDone=0, _matchMatched=[];
+let orderStory=null, orderResult=[];
+let ttsUtterance=null, ttsSpeaking=false;
+let selectedAvatar='🦋';
+
+// =====================================================
+// INIT
+// =====================================================
+window.addEventListener('firebase-ready', () => {
+  FB = window.FB;
+  initParticles();
+  FB.onAuthStateChanged(FB.auth, async user => {
+    hideLoading();
+    if(user){
+      currentUser=user;
+      const snap=await FB.getDoc(FB.doc(FB.db,'users',user.uid));
+      currentParentData=snap.exists()?snap.data():null;
+      showScreen('select');
+      loadChildren();
+    } else {
+      showScreen('auth');
+    }
+  });
+});
+
+// Fallback if Firebase not configured - demo mode
+setTimeout(()=>{
+  if(!FB){
+    hideLoading();
+    initParticles();
+    enterDemoMode();
+  }
+},3000);
+
+function enterDemoMode(){
+  // Demo without Firebase
+  currentUser={uid:'demo'};
+  currentParentData={name:'Demonstração'};
+  activeChild={id:'demo',name:'Criança Demo',avatar:'🦋',ageGroup:'6-8',totalPoints:0,level:1,storiesRead:[],gamesPlayed:0,achievements:[]};
+  showScreen('select');
+  renderDemoChildren();
+}
+
+function renderDemoChildren(){
+  const list=document.getElementById('children-list');
+  list.innerHTML=`
+    <div class="child-card" onclick="selectChild({id:'demo',name:'Demo',avatar:'🦋',ageGroup:'6-8',totalPoints:0,level:1,storiesRead:[],gamesPlayed:0,achievements:[]})">
+      <div class="child-pts">⭐ 0</div>
+      <div class="child-avatar">🦋</div>
+      <div class="child-name">Demo</div>
+      <div class="child-level">Nível 1 — 6 a 8 anos</div>
+    </div>
+    <div class="add-child-btn" onclick="showAddChild()">
+      <div style="font-size:40px;margin-bottom:8px">➕</div>
+      <div style="font-family:'Fredoka One',sans-serif;font-size:16px;color:#636e72">Adicionar Criança</div>
+      <div style="font-size:12px;color:#b2bec3;margin-top:4px">Configure o Firebase para salvar</div>
+    </div>`;
+}
+
+function hideLoading(){document.getElementById('loading').classList.add('hide');}
+
+// =====================================================
+// SCREENS
+// =====================================================
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+}
+
+// =====================================================
+// AUTH
+// =====================================================
+function switchTab(t){
+  document.querySelectorAll('.auth-tab').forEach((b,i)=>b.classList.toggle('active',i===(t==='login'?0:1)));
+  document.querySelectorAll('.auth-form').forEach((f,i)=>f.classList.toggle('active',i===(t==='login'?0:1)));
+}
+
+async function doLogin(){
+  if(!FB){alert('Configure o Firebase primeiro!');return;}
+  const email=document.getElementById('login-email').value;
+  const pass=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-error');
+  try{err.classList.remove('show');await FB.signInWithEmailAndPassword(FB.auth,email,pass);}
+  catch(e){err.textContent=e.code==='auth/invalid-credential'?'Email ou senha incorretos.':'Erro: '+e.message;err.classList.add('show');}
+}
+
+async function doRegister(){
+  if(!FB){alert('Configure o Firebase primeiro!');return;}
+  const name=document.getElementById('reg-name').value;
+  const email=document.getElementById('reg-email').value;
+  const pass=document.getElementById('reg-pass').value;
+  const err=document.getElementById('reg-error');
+  try{
+    err.classList.remove('show');
+    const cred=await FB.createUserWithEmailAndPassword(FB.auth,email,pass);
+    await FB.setDoc(FB.doc(FB.db,'users',cred.user.uid),{name,email,role:'parent',createdAt:FB.serverTimestamp(),children:[]});
+  }catch(e){err.textContent=e.message;err.classList.add('show');}
+}
+
+async function doLogout(){
+  if(FB)await FB.signOut(FB.auth);
+  currentUser=null;currentParentData=null;activeChild=null;
+  showScreen('auth');
+}
+
+// =====================================================
+// CHILD SELECT
+// =====================================================
+async function loadChildren(){
+  document.getElementById('welcome-name').textContent='Olá, '+(currentParentData?.name||'')+'! 👋';
+  const list=document.getElementById('children-list');
+  list.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted)">Carregando...</div>';
+  try{
+    const q=FB.query(FB.collection(FB.db,'children'),FB.where('parentUid','==',currentUser.uid));
+    const snap=await FB.getDocs(q);
+    const children=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderChildCards(children);
+  }catch(e){list.innerHTML='<div style="color:red;padding:20px">Erro ao carregar. Verifique o Firebase.</div>';}
+}
+
+function renderChildCards(children){
+  const list=document.getElementById('children-list');
+  let html=children.map(c=>`
+    <div class="child-card" onclick="selectChild(${JSON.stringify(c).replace(/"/g,'&quot;')})">
+      <div class="child-pts">⭐ ${c.totalPoints||0}</div>
+      <div class="child-avatar">${c.avatar||'🦋'}</div>
+      <div class="child-name">${c.name}</div>
+      <div class="child-level">Nível ${c.level||1} · ${AGE_GROUPS[c.ageGroup]?.label||c.ageGroup}</div>
+    </div>`).join('');
+  html+=`<div class="add-child-btn" onclick="showAddChild()">
+    <div style="font-size:40px;margin-bottom:8px">➕</div>
+    <div style="font-family:'Fredoka One',sans-serif;font-size:16px;color:var(--muted)">Adicionar Criança</div>
+  </div>`;
+  list.innerHTML=html;
+}
+
+function showAddChild(){
+  document.getElementById('add-child-form').style.display='block';
+  const grid=document.getElementById('avatar-grid');
+  selectedAvatar=AVATARS[0];
+  grid.innerHTML=AVATARS.map(a=>`<div class="av-opt ${a===selectedAvatar?'selected':''}" onclick="pickAvatar('${a}')">${a}</div>`).join('');
+  document.getElementById('add-child-form').scrollIntoView({behavior:'smooth'});
+}
+
+function pickAvatar(a){selectedAvatar=a;document.querySelectorAll('.av-opt').forEach(el=>{el.classList.toggle('selected',el.textContent===a);});}
+
+async function saveChild(){
+  const name=document.getElementById('child-name').value.trim();
+  const age=parseInt(document.getElementById('child-age').value);
+  if(!name||!age){alert('Preencha nome e idade!');return;}
+  const ageGroup=age<=5?'3-5':age<=8?'6-8':'9-12';
+  if(!FB){
+    activeChild={id:'demo',name,avatar:selectedAvatar,ageGroup,totalPoints:0,level:1,storiesRead:[],gamesPlayed:0,achievements:[]};
+    selectChild(activeChild);return;
+  }
+  try{
+    const ref=await FB.addDoc(FB.collection(FB.db,'children'),{parentUid:currentUser.uid,name,age,ageGroup,avatar:selectedAvatar,createdAt:FB.serverTimestamp(),totalPoints:0,level:1,storiesRead:[],gamesPlayed:0,achievements:[]});
+    const parentRef=FB.doc(FB.db,'users',currentUser.uid);
+    const parentSnap=await FB.getDoc(parentRef);
+    const ch=parentSnap.data().children||[];
+    await FB.updateDoc(parentRef,{children:[...ch,ref.id]});
+    document.getElementById('add-child-form').style.display='none';
+    loadChildren();
+  }catch(e){alert('Erro: '+e.message);}
+}
+
+function selectChild(child){
+  if(typeof child==='string')child=JSON.parse(child);
+  activeChild=child;
+  document.getElementById('app-avatar').textContent=child.avatar||'🦋';
+  document.getElementById('app-name').textContent=child.name;
+  const lvl=child.level||1;
+  const pts=child.totalPoints||0;
+  const ptsInLevel=pts%50;
+  document.getElementById('app-level').textContent='Nível '+lvl+' · '+AGE_GROUPS[child.ageGroup]?.label;
+  document.getElementById('app-pts').textContent='⭐ '+pts;
+  document.getElementById('app-levelbar').style.width=(ptsInLevel/50*100)+'%';
+  showScreen('app');
+  showTab('hist');
+  renderStoryCards();
+  playBeep('cheer');
+}
+
+function goBackToSelect(){
+  stopTTS();
+  showScreen('select');
+  if(FB)loadChildren();
+}
+
+// =====================================================
+// APP NAVIGATION
+// =====================================================
+function showTab(t){
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.t-'+t).classList.add('active');
+  document.querySelectorAll('.sec-panel').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+t).classList.add('active');
+  closeAllPanels();
+  document.getElementById('reader').classList.remove('open');
+}
+
+function closeAllPanels(){document.querySelectorAll('.game-panel').forEach(p=>p.classList.remove('open'));}
+function closePanel(id){document.getElementById('panel-'+id).classList.remove('open');}
+function closeReader(){document.getElementById('reader').classList.remove('open');stopTTS();}
+
+// =====================================================
+// STORY CARDS
+// =====================================================
+function renderStoryCards(){
+  const ag=activeChild?.ageGroup||'6-8';
+  ['hist','aven','bibl'].forEach(type=>{
+    const key=type==='hist'?'hist':type==='aven'?'aven':'bibl';
+    const el=document.getElementById('cards-'+key);
+    const stories=ALL_STORIES[key].filter(s=>s.ageGroup===ag||s.ageGroup==='all');
+    if(!el)return;
+    if(stories.length===0){el.innerHTML=`<div style="color:var(--muted);font-size:14px;padding:20px 0">Mais histórias chegando para esta faixa etária! 🌟</div>`;return;}
+    el.innerHTML=stories.map(s=>`
+      <div class="card" onclick="openStory('${type}','${s.id}')">
+        <div class="card-art" style="background:${s.color}">${s.emoji}</div>
+        <div class="card-body">
+          <div class="card-title">${s.title}</div>
+          <div class="card-desc">${s.desc}</div>
+          <span class="badge badge-${s.badge}">${s.badgeLabel}</span>
+          ${(activeChild?.storiesRead||[]).includes(s.id)?'<span style="margin-left:6px;font-size:11px;color:#2E7D32">✅ Lida</span>':''}
+        </div>
+      </div>`).join('');
+  });
+}
+
+// =====================================================
+// STORY READER
+// =====================================================
+function openStory(type,id){
+  const stories=ALL_STORIES[type];
+  const story=stories.find(s=>s.id===id);
+  if(!story)return;
+  currentStoryData=story;currentPage=0;
+  document.getElementById('r-emoji').textContent=story.emoji;
+  document.getElementById('r-title').textContent=story.title;
+  renderPages(story);
+  document.getElementById('reader').classList.add('open');
+  setTimeout(()=>document.getElementById('reader').scrollIntoView({behavior:'smooth',block:'start'}),100);
+  playBeep('click');
+}
+
+function renderPages(story){
+  const total=story.pages.length;
+  let html=story.pages.map((p,i)=>`
+    <div class="page ${i===0?'active':''}" id="pg-${i}">
+      <div class="page-art" style="background:${p.bg}">${p.art}</div>
+      <div class="page-text">${p.text}</div>
+      ${p.truth?`<div class="truth-box"><div class="truth-label">⭐ Verdade Aprendida</div><div class="truth-text">${p.truth}</div></div>`:''}
+    </div>`).join('');
+  const dots=story.pages.map((_,i)=>`<div class="dot ${i===0?'active':''}" id="dot-${i}"></div>`).join('');
+  document.getElementById('story-pages').innerHTML=html+`
+    <div class="page-nav">
+      <button class="btn btn-ghost btn-sm" id="prev-pg" onclick="changePage(-1)" disabled>← Anterior</button>
+      <div class="page-dots">${dots}</div>
+      <button class="btn btn-primary btn-sm" id="next-pg" onclick="changePage(1)">Próxima →</button>
+    </div>`;
+  updatePageNav();
+}
+
+function changePage(dir){
+  const total=currentStoryData.pages.length;
+  const np=currentPage+dir;
+  if(np<0||np>=total)return;
+  stopTTS();
+  document.getElementById('pg-'+currentPage).classList.remove('active');
+  document.getElementById('dot-'+currentPage).classList.remove('active');
+  currentPage=np;
+  document.getElementById('pg-'+currentPage).classList.add('active');
+  document.getElementById('dot-'+currentPage).classList.add('active');
+  updatePageNav();playBeep('click');
+  const p=currentStoryData.pages[currentPage];
+  if(p.truth){playBeep('cheer');saveProgress('story',currentStoryData.id,currentStoryData.title,5,5);}
+}
+
+function updatePageNav(){
+  const total=currentStoryData.pages.length;
+  document.getElementById('prev-pg').disabled=currentPage===0;
+  const nb=document.getElementById('next-pg');
+  if(currentPage===total-1){nb.textContent='✅ Fim!';nb.disabled=true;}
+  else{nb.textContent='Próxima →';nb.disabled=false;}
+}
+
+// =====================================================
+// TTS - Narração por Voz
+// =====================================================
+function toggleTTS(){
+  if(ttsSpeaking){stopTTS();return;}
+  const page=currentStoryData?.pages[currentPage];
+  if(!page)return;
+  if(!window.speechSynthesis){alert('Seu navegador não suporta narração de voz.');return;}
+  const text=page.text+(page.truth?' Verdade aprendida: '+page.truth.replace(/[🦁💙🌟💪🌈🕊️🔬👫❤️⭐💜🌱🌿🤝👸]*/g,''):'');
+  ttsUtterance=new SpeechSynthesisUtterance(text);
+  ttsUtterance.lang='pt-BR';
+  ttsUtterance.rate=0.9;
+  ttsUtterance.pitch=1.1;
+  const voices=window.speechSynthesis.getVoices();
+  const ptVoice=voices.find(v=>v.lang==='pt-BR')||voices.find(v=>v.lang.startsWith('pt'));
+  if(ptVoice)ttsUtterance.voice=ptVoice;
+  ttsUtterance.onend=()=>{ttsSpeaking=false;updateTTSBtn();};
+  ttsUtterance.onerror=()=>{ttsSpeaking=false;updateTTSBtn();};
+  window.speechSynthesis.speak(ttsUtterance);
+  ttsSpeaking=true;updateTTSBtn();
+}
+
+function stopTTS(){
+  if(window.speechSynthesis)window.speechSynthesis.cancel();
+  ttsSpeaking=false;updateTTSBtn();
+}
+
+function updateTTSBtn(){
+  const btn=document.getElementById('tts-btn');
+  if(!btn)return;
+  btn.textContent=ttsSpeaking?'⏹️':'🔊';
+  btn.classList.toggle('speaking',ttsSpeaking);
+}
+
+// =====================================================
+// GAMES
+// =====================================================
+function openGame(game){
+  closeAllPanels();
+  const panel=document.getElementById('panel-'+game);
+  panel.classList.add('open');
+  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'start'}),100);
+  playBeep('click');
+  const ag=activeChild?.ageGroup||'6-8';
+  if(game==='quiz')initQuiz(ag);
+  else if(game==='memory')initMemory(ag);
+  else if(game==='word')initWord(ag);
+  else if(game==='count')initCount();
+  else if(game==='match')initMatch();
+  else if(game==='order')initOrder();
+}
+
+// --- QUIZ ---
+function initQuiz(ag){
+  quizIdx=0;quizScore=0;quizAnswered=false;
+  renderQuiz(ag||activeChild?.ageGroup||'6-8');
+}
+function renderQuiz(ag){
+  const body=document.getElementById('quiz-body');
+  const qs=QUIZZES[ag]||QUIZZES['6-8'];
+  if(quizIdx>=qs.length){
+    const pct=Math.round(quizScore/qs.length*100);
+    const stars=pct>=80?'⭐⭐⭐':pct>=50?'⭐⭐':'⭐';
+    body.innerHTML=`<div class="celeb"><span class="celeb-icon">${pct>=80?'🏆':pct>=50?'😊':'💪'}</span><div class="celeb-title">${pct>=80?'Incrível!':pct>=50?'Muito bem!':'Continue tentando!'}</div><div class="celeb-sub">Você acertou ${quizScore} de ${qs.length}!</div><div class="celeb-stars">${stars}</div><button class="btn btn-primary" onclick="initQuiz('${ag}')">🔄 Jogar novamente</button></div>`;
+    if(pct>=80){launchConfetti();playBeep('cheer');}
+    saveProgress('game','quiz','Quiz dos Valores',quizScore,qs.length);
+    return;
+  }
+  const q=qs[quizIdx];
+  body.innerHTML=`
+    <div class="q-score">⭐ ${quizScore} · Pergunta ${quizIdx+1}/${qs.length}</div>
+    <div class="prog-wrap"><div class="prog-fill" style="width:${quizIdx/qs.length*100}%"></div></div>
+    <div class="quiz-q">${q.q}</div>
+    <div class="quiz-opts">${q.opts.map((o,i)=>`<button class="qopt" onclick="answerQuiz(${i},'${ag}')">${o}</button>`).join('')}</div>
+    <div class="feedback" id="q-fb"></div>
+    <div style="text-align:center;margin-top:12px"><button class="btn btn-primary btn-sm" id="nxt-btn" onclick="nextQuiz('${ag}')" style="display:none">Próxima →</button></div>`;
+}
+function answerQuiz(idx,ag){
+  if(quizAnswered)return;quizAnswered=true;
+  const q=(QUIZZES[ag]||QUIZZES['6-8'])[quizIdx];
+  document.querySelectorAll('.qopt').forEach(o=>o.style.pointerEvents='none');
+  if(idx===q.c){quizScore++;document.querySelectorAll('.qopt')[idx].classList.add('correct');playBeep('correct');}
+  else{document.querySelectorAll('.qopt')[idx].classList.add('wrong');document.querySelectorAll('.qopt')[q.c].classList.add('correct');playBeep('wrong');}
+  const fb=document.getElementById('q-fb');
+  fb.textContent=idx===q.c?'🎉 Muito bem! '+q.exp:'💪 Quase! '+q.exp;
+  fb.className='feedback '+(idx===q.c?'ok':'no')+' show';
+  document.getElementById('nxt-btn').style.display='inline-flex';
+}
+function nextQuiz(ag){quizIdx++;quizAnswered=false;renderQuiz(ag);}
+
+// --- MEMORY ---
+function initMemory(ag){
+  memMatched=0;memMoves=0;memLock=false;memFlipped=[];
+  const pairs=MEMORY_PAIRS[ag]||MEMORY_PAIRS['6-8'];
+  const all=[...pairs,...pairs].sort(()=>Math.random()-.5);
+  memCards=all.map((v,i)=>({id:i,val:v,revealed:false,matched:false}));
+  renderMemory(ag);
+}
+function renderMemory(ag){
+  const body=document.getElementById('memory-body');
+  body.innerHTML=`
+    <div style="font-family:'Fredoka One',sans-serif;font-size:16px;color:var(--muted);text-align:center;margin-bottom:12px">🎯 Movimentos: <span id="mm-moves">${memMoves}</span> &nbsp; ✅ Pares: <span id="mm-matched">${memMatched}</span>/8</div>
+    <div class="mem-grid">${memCards.map(c=>`<div class="mem-card ${c.revealed?'revealed':''} ${c.matched?'matched':''}" id="mc-${c.id}" onclick="flipMem(${c.id},'${ag}')">${c.revealed||c.matched?c.val:'?'}</div>`).join('')}</div>
+    <div style="text-align:center;margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="initMemory('${ag}')">🔄 Reiniciar</button></div>`;
+}
+function flipMem(id,ag){
+  if(memLock)return;
+  const c=memCards[id];
+  if(c.revealed||c.matched||memFlipped.length>=2)return;
+  c.revealed=true;memFlipped.push(id);
+  const el=document.getElementById('mc-'+id);
+  el.classList.add('revealed');el.textContent=c.val;
+  playBeep('click');
+  if(memFlipped.length===2){
+    memMoves++;document.getElementById('mm-moves').textContent=memMoves;
+    memLock=true;
+    const[a,b]=memFlipped;
+    if(memCards[a].val===memCards[b].val){
+      memCards[a].matched=true;memCards[b].matched=true;memMatched++;
+      document.getElementById('mc-'+a).classList.add('matched');
+      document.getElementById('mc-'+b).classList.add('matched');
+      document.getElementById('mm-matched').textContent=memMatched;
+      memFlipped=[];memLock=false;playBeep('correct');
+      if(memMatched===8){
+        setTimeout(()=>{launchConfetti();playBeep('cheer');
+          document.getElementById('memory-body').innerHTML+=`<div class="celeb"><span class="celeb-icon">🏆</span><div class="celeb-title">Memória incrível!</div><div class="celeb-sub">Completado em ${memMoves} movimentos!</div><div class="celeb-stars">⭐⭐⭐</div><button class="btn btn-primary" onclick="initMemory('${ag}')">🔄 Jogar de novo</button></div>`;
+          saveProgress('game','memory','Jogo da Memória',8,8);
+        },300);
+      }
+    }else{
+      setTimeout(()=>{
+        memCards[a].revealed=false;memCards[b].revealed=false;
+        document.getElementById('mc-'+a).classList.remove('revealed');
+        document.getElementById('mc-'+b).classList.remove('revealed');
+        document.getElementById('mc-'+a).textContent='?';
+        document.getElementById('mc-'+b).textContent='?';
+        memFlipped=[];memLock=false;playBeep('wrong');
+      },900);
+    }
+  }
+}
+
+// --- WORD ---
+function initWord(ag){
+  const wds=WORD_GAMES[ag]||WORD_GAMES['6-8'];
+  wordCurrent=wds[Math.floor(Math.random()*wds.length)];
+  wordGuessed=[];wordWrong=[];
+  renderWord(ag);
+}
+function renderWord(ag){
+  const w=wordCurrent.word;
+  const lives=6-wordWrong.length;
+  const display=w.split('').map(c=>wordGuessed.includes(c)?`<span style="color:var(--orange)">${c}</span>`:'_').join(' ');
+  const won=w.split('').every(c=>wordGuessed.includes(c));
+  const lost=wordWrong.length>=6;
+  const letters='ABCDEFGHIJKLMNOPRSTUVWYZ'.split('');
+  const body=document.getElementById('word-body');
+  const heartsHTML='❤️'.repeat(lives)+'🖤'.repeat(6-lives);
+  body.innerHTML=`
+    <div class="word-hint">${wordCurrent.hint}</div>
+    <div class="word-disp">${display}</div>
+    <div class="lives">${heartsHTML}</div>
+    ${won?`<div class="celeb"><span class="celeb-icon">🎉</span><div class="celeb-title">Você acertou!</div><div class="celeb-sub">A palavra era: ${w}</div><div class="celeb-stars">⭐⭐⭐</div><button class="btn btn-primary" onclick="initWord('${ag}')">🔤 Próxima palavra</button></div>`:
+    lost?`<div class="celeb"><span class="celeb-icon">💪</span><div class="celeb-title">Quase lá!</div><div class="celeb-sub">A palavra era: <strong>${w}</strong></div><button class="btn btn-primary" onclick="initWord('${ag}')">🔄 Tentar novamente</button></div>`:
+    `<div class="keyboard">${letters.map(l=>`<button class="kbtn ${wordGuessed.includes(l)?'hit':wordWrong.includes(l)?'miss':''}" onclick="guessLetter('${l}','${ag}')" ${wordGuessed.includes(l)||wordWrong.includes(l)?'disabled':''}>${l}</button>`).join('')}</div>
+    <div style="text-align:center"><button class="btn btn-ghost btn-sm" onclick="initWord('${ag}')">🔄 Nova palavra</button></div>`}`;
+  if(won)saveProgress('game','word','Descubra a Palavra',1,1);
+}
+function guessLetter(l,ag){
+  if(wordCurrent.word.includes(l)){wordGuessed.push(l);playBeep('correct');}
+  else{wordWrong.push(l);playBeep('wrong');}
+  renderWord(ag);
+}
+
+// --- COUNT ---
+function initCount(){countIdx=0;countScore=0;renderCount();}
+function renderCount(){
+  const body=document.getElementById('count-body');
+  if(countIdx>=COUNT_ROUNDS.length){
+    const pct=Math.round(countScore/COUNT_ROUNDS.length*100);
+    body.innerHTML=`<div class="celeb"><span class="celeb-icon">${pct===100?'🌟':'⭐'}</span><div class="celeb-title">${pct===100?'Perfeito!':'Muito bem!'}</div><div class="celeb-sub">Você acertou ${countScore} de ${COUNT_ROUNDS.length}!</div><div class="celeb-stars">${pct===100?'⭐⭐⭐':pct>=60?'⭐⭐':'⭐'}</div><button class="btn btn-primary" onclick="initCount()">🔄 Jogar novamente</button></div>`;
+    if(pct===100){launchConfetti();playBeep('cheer');}
+    saveProgress('game','count','Contando com Deus',countScore,COUNT_ROUNDS.length);
+    return;
+  }
+  const r=COUNT_ROUNDS[countIdx];
+  body.innerHTML=`
+    <div style="font-family:'Fredoka One',sans-serif;font-size:15px;color:var(--muted);text-align:center;margin-bottom:10px">Questão ${countIdx+1}/${COUNT_ROUNDS.length} · ⭐ ${countScore}</div>
+    <div class="count-scene">${r.scene}</div>
+    <div class="count-q">${r.q}</div>
+    <div class="count-opts">${r.opts.map(o=>`<button class="cnt-btn" onclick="answerCount(${o},this)">${o}</button>`).join('')}</div>
+    <div class="feedback" id="cnt-fb"></div>`;
+}
+function answerCount(val,btn){
+  const r=COUNT_ROUNDS[countIdx];
+  document.querySelectorAll('.cnt-btn').forEach(b=>b.onclick=null);
+  if(val===r.answer){btn.classList.add('correct-c');countScore++;playBeep('correct');const fb=document.getElementById('cnt-fb');fb.textContent='🎉 Correto!';fb.className='feedback ok show';}
+  else{btn.classList.add('wrong-c');playBeep('wrong');const fb=document.getElementById('cnt-fb');fb.textContent='💪 A resposta era '+r.answer;fb.className='feedback no show';}
+  setTimeout(()=>{countIdx++;renderCount();},1400);
+}
+
+// --- MATCH ---
+function initMatch(){
+  matchSel1=null;matchSel2=null;matchDone=0;
+  _matchMatched=new Array(5).fill(false);
+  renderMatch();
+}
+function renderMatch(){
+  const body=document.getElementById('match-body');
+  body.innerHTML=`
+    <div style="font-family:'Fredoka One',sans-serif;font-size:15px;color:var(--muted);text-align:center;margin-bottom:14px">Conecte a situação ao valor correto! ✅ ${matchDone}/5</div>
+    <div class="match-layout">
+      <div><div class="match-col-lbl">📌 Situação</div>${MATCH_DATA.situations.map((s,i)=>`<div class="mitem ${_matchMatched[i]?'matched':''}" id="sit-${i}" onclick="selectMatch('sit',${i})">${s}</div>`).join('')}</div>
+      <div><div class="match-col-lbl">💛 Valor</div>${MATCH_DATA.values.map((v,i)=>`<div class="mitem ${_matchMatched[i]?'matched':''}" id="val-${i}" onclick="selectMatch('val',${i})">${v}</div>`).join('')}</div>
+    </div>
+    <div class="feedback" id="match-fb"></div>`;
+  matchSel1=null;matchSel2=null;
+}
+function selectMatch(type,idx){
+  if(_matchMatched[idx])return;
+  playBeep('click');
+  if(type==='sit'){if(matchSel1!==null)document.getElementById('sit-'+matchSel1)?.classList.remove('sel');matchSel1=idx;document.getElementById('sit-'+idx).classList.add('sel');}
+  else{if(matchSel2!==null)document.getElementById('val-'+matchSel2)?.classList.remove('sel');matchSel2=idx;document.getElementById('val-'+idx).classList.add('sel');}
+  if(matchSel1!==null&&matchSel2!==null){
+    const ok=MATCH_DATA.correct[matchSel1]===matchSel2;
+    const fb=document.getElementById('match-fb');
+    if(ok){
+      _matchMatched[matchSel1]=true;_matchMatched[matchSel2]=true;matchDone++;
+      document.getElementById('sit-'+matchSel1).classList.add('matched');
+      document.getElementById('val-'+matchSel2).classList.add('matched');
+      fb.textContent='🎉 Correto!';fb.className='feedback ok show';playBeep('correct');
+      if(matchDone===5){setTimeout(()=>{launchConfetti();playBeep('cheer');document.getElementById('match-body').innerHTML+=`<div class="celeb"><span class="celeb-icon">🏆</span><div class="celeb-title">Perfeito!</div><div class="celeb-sub">Você conectou todos os valores!</div><div class="celeb-stars">⭐⭐⭐</div><button class="btn btn-primary" onclick="initMatch()">🔄 Jogar novamente</button></div>`;saveProgress('game','match','Liga os Valores',5,5);},400);}
+    }else{
+      document.getElementById('sit-'+matchSel1).classList.add('wrongm');
+      document.getElementById('val-'+matchSel2).classList.add('wrongm');
+      fb.textContent='💪 Tente outra combinação!';fb.className='feedback no show';playBeep('wrong');
+      setTimeout(()=>{document.getElementById('sit-'+matchSel1)?.classList.remove('sel','wrongm');document.getElementById('val-'+matchSel2)?.classList.remove('sel','wrongm');matchSel1=null;matchSel2=null;fb.className='feedback';},800);
+      return;
+    }
+    matchSel1=null;matchSel2=null;
+  }
+}
+
+// --- ORDER ---
+function initOrder(){
+  orderStory=ORDER_STORIES[Math.floor(Math.random()*ORDER_STORIES.length)];
+  orderResult=[];renderOrder();
+}
+function renderOrder(){
+  const body=document.getElementById('order-body');
+  const done=orderResult.length,total=orderStory.steps.length;
+  const remaining=orderStory.steps.map((_,i)=>i).filter(i=>!orderResult.includes(i));
+  body.innerHTML=`
+    <div style="font-family:'Fredoka One',sans-serif;font-size:16px;color:var(--muted);text-align:center;margin-bottom:14px">📖 "${orderStory.title}"</div>
+    <div style="font-size:14px;color:var(--muted);text-align:center;margin-bottom:12px">✅ ${done}/${total} eventos colocados</div>
+    ${orderResult.map((i,pos)=>`<div class="order-step">${pos+1}. ${orderStory.steps[i]}</div>`).join('')}
+    ${remaining.length>0?`<div style="font-size:13px;font-weight:700;color:var(--muted);margin:12px 0 8px">Escolha o próximo evento:</div>${remaining.map(i=>`<button class="order-opt" onclick="addOrder(${i})">${orderStory.steps[i]}</button>`).join('')}`:''}
+    ${done===total?checkOrder():''}
+    <div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="initOrder()">🔄 Nova história</button></div>`;
+}
+function checkOrder(){
+  const ok=orderStory.correct.every((v,i)=>v===orderResult[i]);
+  if(ok){setTimeout(()=>{launchConfetti();playBeep('cheer');saveProgress('game','order','Ordem da História',1,1);},100);}
+  return ok?`<div class="celeb"><span class="celeb-icon">🏆</span><div class="celeb-title">Ordem perfeita!</div><div class="celeb-stars">⭐⭐⭐</div></div>`:
+    `<div class="celeb"><span class="celeb-icon">💪</span><div class="celeb-title">Quase certo!</div><div class="celeb-sub">Tente de novo!</div></div>`;
+}
+function addOrder(idx){orderResult.push(idx);playBeep('click');renderOrder();}
+
+// =====================================================
+// PROGRESS SAVING
+// =====================================================
+async function saveProgress(type,actId,title,score,maxScore){
+  if(!activeChild)return;
+  const points=Math.round((score/maxScore)*10);
+  const newPts=(activeChild.totalPoints||0)+points;
+  const newLevel=Math.floor(newPts/50)+1;
+  activeChild.totalPoints=newPts;
+  activeChild.level=newLevel;
+  if(type==='story')activeChild.storiesRead=[...new Set([...(activeChild.storiesRead||[]),actId])];
+  activeChild.gamesPlayed=(activeChild.gamesPlayed||0)+1;
+  // Update UI
+  document.getElementById('app-pts').textContent='⭐ '+newPts;
+  document.getElementById('app-level').textContent='Nível '+newLevel+' · '+(AGE_GROUPS[activeChild.ageGroup]?.label||'');
+  document.getElementById('app-levelbar').style.width=((newPts%50)/50*100)+'%';
+  // Save to Firebase
+  if(!FB||activeChild.id==='demo')return;
+  try{
+    await FB.addDoc(FB.collection(FB.db,'progress'),{childId:activeChild.id,type,actId,title,score,maxScore,points,completedAt:FB.serverTimestamp()});
+    await FB.updateDoc(FB.doc(FB.db,'children',activeChild.id),{totalPoints:newPts,level:newLevel,storiesRead:activeChild.storiesRead,gamesPlayed:activeChild.gamesPlayed});
+  }catch(e){console.warn('Erro ao salvar progresso:',e);}
+}
+
+// =====================================================
+// PARENT DASHBOARD
+// =====================================================
+async function goParentDashboard(){
+  showScreen('parent');
+  document.getElementById('child-detail').style.display='none';
+  const list=document.getElementById('parent-children-list');
+  if(!FB){list.innerHTML='<div style="background:#fff;border-radius:16px;padding:24px;text-align:center;color:var(--muted)">Configure o Firebase para ver dados reais.</div>';return;}
+  list.innerHTML='<div style="padding:20px;color:var(--muted)">Carregando...</div>';
+  try{
+    const q=FB.query(FB.collection(FB.db,'children'),FB.where('parentUid','==',currentUser.uid));
+    const snap=await FB.getDocs(q);
+    const children=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(children.length===0){list.innerHTML='<div style="background:#fff;border-radius:16px;padding:24px;text-align:center;color:var(--muted)">Nenhuma criança cadastrada ainda.</div>';return;}
+    list.innerHTML=children.map(c=>`
+      <div class="child-row" style="cursor:pointer" onclick="loadChildDetail('${c.id}')">
+        <div class="child-row-avatar">${c.avatar||'🦋'}</div>
+        <div class="child-row-info">
+          <div class="child-row-name">${c.name}</div>
+          <div class="child-row-sub">${AGE_GROUPS[c.ageGroup]?.label||c.ageGroup} · Nível ${c.level||1} · ${c.storiesRead?.length||0} histórias lidas</div>
+        </div>
+        <div class="child-row-pts">⭐ ${c.totalPoints||0}</div>
+      </div>`).join('');
+  }catch(e){list.innerHTML='<div style="color:red;padding:20px">Erro: '+e.message+'</div>';}
+}
+
+async function loadChildDetail(childId){
+  document.getElementById('child-detail').style.display='block';
+  document.getElementById('child-detail').scrollIntoView({behavior:'smooth'});
+  const snap=await FB.getDoc(FB.doc(FB.db,'children',childId));
+  const child={id:snap.id,...snap.data()};
+  document.getElementById('detail-name').textContent=child.avatar+' '+child.name+' — Progresso';
+  // Stats
+  document.getElementById('detail-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-num">${child.totalPoints||0}</div><div class="stat-lbl">⭐ Pontos totais</div></div>
+    <div class="stat-card"><div class="stat-num">${child.level||1}</div><div class="stat-lbl">🏅 Nível atual</div></div>
+    <div class="stat-card"><div class="stat-num">${child.storiesRead?.length||0}</div><div class="stat-lbl">📖 Histórias lidas</div></div>
+    <div class="stat-card"><div class="stat-num">${child.gamesPlayed||0}</div><div class="stat-lbl">🎮 Jogos jogados</div></div>`;
+  // Achievements
+  const achs=child.achievements||[];
+  document.getElementById('detail-achievements').innerHTML=achs.length>0?
+    achs.map(a=>ACHIEVEMENTS[a]?`<span class="ach-chip">${ACHIEVEMENTS[a].icon} ${ACHIEVEMENTS[a].title}</span>`:'').join(''):'<div style="color:var(--muted);font-size:14px">Nenhuma conquista ainda. Continue jogando! 💪</div>';
+  // Progress history
+  const pq=FB.query(FB.collection(FB.db,'progress'),FB.where('childId','==',childId),FB.orderBy('completedAt','desc'));
+  const psnap=await FB.getDocs(pq);
+  const records=psnap.docs.map(d=>d.data());
+  // Chart
+  const stories=records.filter(r=>r.type==='story').length;
+  const games=records.filter(r=>r.type==='game').length;
+  const total=Math.max(stories+games,1);
+  document.getElementById('detail-chart').innerHTML=`
+    <div class="chart-bar-wrap"><div class="chart-bar-lbl"><span>📖 Histórias</span><span>${stories}</span></div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${stories/total*100}%"></div></div></div>
+    <div class="chart-bar-wrap" style="margin-top:12px"><div class="chart-bar-lbl"><span>🎮 Jogos</span><span>${games}</span></div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${games/total*100}%;background:linear-gradient(90deg,var(--teal),var(--blue))"></div></div></div>`;
+  // History table
+  document.getElementById('detail-history').innerHTML=records.slice(0,20).map(r=>{
+    const d=r.completedAt?.toDate?r.completedAt.toDate():new Date();
+    const dateStr=d.toLocaleDateString('pt-BR');
+    const pts=Math.round((r.score/r.maxScore)*10);
+    return`<tr><td>${r.title||r.actId}</td><td><span class="badge" style="background:${r.type==='story'?'#FFF3E0':'#E8F5E9'};color:${r.type==='story'?'#E65100':'#2E7D32'}">${r.type==='story'?'📖 História':'🎮 Jogo'}</span></td><td>+${pts} pts</td><td style="color:var(--muted)">${dateStr}</td></tr>`;
+  }).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Nenhuma atividade ainda</td></tr>';
+}
+
+// =====================================================
+// SOUND
+// =====================================================
+function playBeep(type){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);
+    if(type==='correct'){o.frequency.value=523;g.gain.value=0.2;o.start();[659,784].forEach((f,i)=>setTimeout(()=>o.frequency.value=f,(i+1)*150));setTimeout(()=>o.stop(),500);}
+    else if(type==='wrong'){o.frequency.value=200;o.type='sawtooth';g.gain.value=0.15;o.start();setTimeout(()=>o.stop(),300);}
+    else if(type==='click'){o.frequency.value=440;g.gain.value=0.1;o.start();setTimeout(()=>o.stop(),80);}
+    else if(type==='cheer'){o.frequency.value=400;g.gain.value=0.15;o.start();[440,493,523,587,659,784].forEach((f,i)=>setTimeout(()=>o.frequency.value=f,i*80));setTimeout(()=>o.stop(),600);}
+  }catch(e){}
+}
+
+// =====================================================
+// CONFETTI
+// =====================================================
+function launchConfetti(){
+  const colors=['#FF6B6B','#FFC947','#4ECDC4','#A29BFE','#55EFC4','#fd79a8'];
+  for(let i=0;i<70;i++){
+    const el=document.createElement('div');
+    el.className='cnf';
+    el.style.cssText=`left:${Math.random()*100}vw;top:-20px;background:${colors[Math.floor(Math.random()*colors.length)]};transform:rotate(${Math.random()*360}deg);animation-duration:${1.5+Math.random()*2}s;animation-delay:${Math.random()*.6}s`;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),4000);
+  }
+}
+
+// =====================================================
+// PARTICLES
+// =====================================================
+function initParticles(){
+  const p=document.getElementById('particles');
+  const emojis=['⭐','🌟','✨','💫','🎈','💛','💙','💚','🌈'];
+  for(let i=0;i<12;i++){
+    const el=document.createElement('div');
+    el.className='ptc';
+    el.textContent=emojis[i%emojis.length];
+    el.style.cssText=`left:${Math.random()*100}%;font-size:${14+Math.random()*14}px;animation-duration:${10+Math.random()*14}s;animation-delay:${Math.random()*12}s`;
+    p.appendChild(el);
+  }
+}
+
+// Load voices for TTS
+if(window.speechSynthesis){
+  window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();
+}
+</script>
+</body>
+</html>
