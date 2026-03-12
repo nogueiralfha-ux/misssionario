@@ -12,32 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, query, where, getDocs, orderBy, serverTimestamp, Timestamp }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// =====================================================
-// ⚙️  SUBSTITUA AQUI PELAS SUAS CREDENCIAIS FIREBASE
-//     console.firebase.google.com → Novo projeto →
-//     Configurações → Adicionar app web
-// =====================================================
-const FIREBASE_CONFIG = {
-  apiKey:            "COLE_SUA_API_KEY_AQUI",
-  authDomain:        "COLE_SEU_AUTH_DOMAIN_AQUI",
-  projectId:         "COLE_SEU_PROJECT_ID_AQUI",
-  storageBucket:     "COLE_SEU_STORAGE_BUCKET_AQUI",
-  messagingSenderId: "COLE_SEU_SENDER_ID_AQUI",
-  appId:             "COLE_SEU_APP_ID_AQUI"
-};
-// =====================================================
-
-const firebaseApp = initializeApp(FIREBASE_CONFIG);
-const auth = getAuth(firebaseApp);
-const db   = getFirestore(firebaseApp);
 
 // Expose to global scope for non-module code
 window.FB = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword,
